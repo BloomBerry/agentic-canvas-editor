@@ -3,8 +3,8 @@
 [![Paper](https://img.shields.io/badge/EMNLP%202026-Industry%20Track-b31b1b.svg)](#citation)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-Official source code for our paper on **agentic slide editing via structured
-canvas representation with self-correction**, **accepted at the EMNLP 2026
+Official source code for our paper **"ACE: A Self-Correcting Agentic Canvas
+Editor for Multi-Slide Presentation Automation"**, **accepted at the EMNLP 2026
 Industry Track**.
 
 > 📄 **Paper:** _archive URL to be updated_ (`xxx.archive` — TBD)
@@ -588,8 +588,8 @@ This work was **accepted at the EMNLP 2026 Industry Track**.
 If you use this code or the benchmark, please cite:
 
 ```bibtex
-@inproceedings{agentic-canvas-editor-2026,
-  title     = {Agentic Slide Editing via Structured Canvas Representation with Self-Correction},
+@inproceedings{ace-2026,
+  title     = {ACE: A Self-Correcting Agentic Canvas Editor for Multi-Slide Presentation Automation},
   author    = {MIRIDIH},
   booktitle = {Proceedings of the 2026 Conference on Empirical Methods in Natural Language Processing: Industry Track (EMNLP 2026)},
   year      = {2026},
