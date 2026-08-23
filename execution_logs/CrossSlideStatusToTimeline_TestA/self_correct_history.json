@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 98: Cross-Slide Conditional Formatting (Status \u2192 Timeline)",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.939,
+    "input_tokens": 1358,
+    "output_tokens": 88,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000684,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 805,
+        "output_tokens": 52,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.1662919521331787
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 553,
+        "output_tokens": 36,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.7724740505218506
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.074393,
+    "if_judge_cost": 0.005566,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000684,
+    "total_cost": 0.080643
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent correctly mapped each slide 2 status to the corresponding slide 3 timeline shape\u2014Mars Sample Return red for At Risk, Kaheawa Wind Farm green for On Track, and U.S. Renewable Energy Growth blue for Completed\u2014with no unrelated edits.",
+      "prompt": "Using the status table on slide 2, update the project timeline on slide 3. For any project marked 'At Risk', change its corresponding shape's fill color to red, On Track \u2192 green, Completed \u2192 blue.",
+      "inference_sec": 11.942476034164429,
+      "judge_sec": 5.369821786880493,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 714,
+          "output_tokens": 531,
+          "cache_read_input_tokens": 69360,
+          "cache_creation_5m": 11594,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.074393,
+          "n_responses": 2,
+          "elapsed_sec": 11.942
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 5.37,
+          "input_tokens": 3173,
+          "output_tokens": 160,
+          "reasoning_tokens": 89,
+          "cost_usd": 0.005566,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

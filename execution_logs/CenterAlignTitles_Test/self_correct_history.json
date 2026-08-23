@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 22: Center Align Title Placeholders",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.129,
+    "input_tokens": 1352,
+    "output_tokens": 77,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000664,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 802,
+        "output_tokens": 43,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.9825139045715332
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 550,
+        "output_tokens": 34,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.14680814743042
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.107248,
+    "if_judge_cost": 0.006876,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000664,
+    "total_cost": 0.114788
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent centered every main title placeholder that was initially left-aligned on slides 2\u20135, 7\u20139, and 11, while leaving slides whose titles were already centered unchanged and making no unrelated edits.",
+      "prompt": "On each slide, horizontally center the text in the main title placeholder.",
+      "inference_sec": 23.746320247650146,
+      "judge_sec": 5.87913703918457,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 1500,
+          "output_tokens": 949,
+          "cache_read_input_tokens": 75342,
+          "cache_creation_5m": 17576,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.107248,
+          "n_responses": 2,
+          "elapsed_sec": 23.746
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 5.879,
+          "input_tokens": 4085,
+          "output_tokens": 177,
+          "reasoning_tokens": 113,
+          "cost_usd": 0.006876,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

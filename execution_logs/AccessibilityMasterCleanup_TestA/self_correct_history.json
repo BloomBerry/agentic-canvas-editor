@@ -1,0 +1,109 @@
+{
+  "case_name": "Case 67: WCAG Accessibility & Master Cleanup",
+  "max_iter": 3,
+  "threshold": 5.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 2,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 4.26,
+    "input_tokens": 1362,
+    "output_tokens": 104,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000711,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 555,
+        "output_tokens": 28,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.577301025390625
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 807,
+        "output_tokens": 76,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 2.682234764099121
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 1.532615,
+    "if_judge_cost": 0.086214,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000711,
+    "total_cost": 1.61954
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 4.0,
+      "IF_reason": "The agent removed Slide 1 and changed essentially all remaining text from Inter to Poppins while preserving apparent sizes/weights, but it did not clearly apply full named text styles from the reference beyond font family, so there may be minor incompleteness.",
+      "prompt": "Apply the correct text styles to all text in the remaining slides, referencing the text styles from Slide 1. After all, remove Slide 1.",
+      "inference_sec": 105.21662402153015,
+      "judge_sec": 40.28624105453491,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 40175,
+          "output_tokens": 5434,
+          "cache_read_input_tokens": 174669,
+          "cache_creation_5m": 61368,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.484566,
+          "n_responses": 4,
+          "elapsed_sec": 105.217
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 40.286,
+          "input_tokens": 19459,
+          "output_tokens": 1622,
+          "reasoning_tokens": 1552,
+          "cost_usd": 0.040544,
+          "calls": 1
+        },
+        "distill": {}
+      },
+      "feedback_used_in_next_iter": "The following is a judge's critique of your previous attempt at this slide-editing task. Address each issue raised:\n\nThe agent removed Slide 1 and changed essentially all remaining text from Inter to Poppins while preserving apparent sizes/weights, but it did not clearly apply full named text styles from the reference beyond font family, so there may be minor incompleteness.",
+      "actions_history_used_in_next_iter": "- (iter 1) get_local_text_styles({})\n- (iter 1) batch_execute(set_text_font\u00d793)\n- (iter 1) delete_slide(1:2266)"
+    },
+    {
+      "iter": 2,
+      "IF": 5.0,
+      "IF_reason": "The agent removed the original Slide 1 and updated the text across all remaining slides from Inter to the Poppins-based styles, including preserving/changing relevant weights such as Regular and SemiBold with only layout-size side effects from the font substitution.",
+      "prompt": "The following is a judge's critique of your previous attempt at this slide-editing task. Address each issue raised:\n\nThe agent removed Slide 1 and changed essentially all remaining text from Inter to Poppins while preserving apparent sizes/weights, but it did not clearly apply full named text styles from the reference beyond font family, so there may be minor incompleteness.",
+      "inference_sec": 129.05628180503845,
+      "judge_sec": 54.60079908370972,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 130204,
+          "output_tokens": 9622,
+          "cache_read_input_tokens": 299794,
+          "cache_creation_5m": 112845,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 1.048049,
+          "n_responses": 9,
+          "elapsed_sec": 129.056
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 54.601,
+          "input_tokens": 19432,
+          "output_tokens": 2138,
+          "reasoning_tokens": 2070,
+          "cost_usd": 0.04567,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

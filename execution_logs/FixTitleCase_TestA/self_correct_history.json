@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 21: Title Case Titles",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.777,
+    "input_tokens": 1370,
+    "output_tokens": 70,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.00066,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 811,
+        "output_tokens": 38,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.3302390575408936
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 559,
+        "output_tokens": 32,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.4465792179107666
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.117353,
+    "if_judge_cost": 0.013336,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.00066,
+    "total_cost": 0.131349
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent changed every slide title that needed capitalization into appropriate Title Case while leaving non-title text and already-valid/no-title slides unchanged, with no unrelated edits.",
+      "prompt": "Please go through the presentation and change all the slide titles to use Title Case capitalization.",
+      "inference_sec": 32.47247910499573,
+      "judge_sec": 10.210647821426392,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 2584,
+          "output_tokens": 1539,
+          "cache_read_input_tokens": 74849,
+          "cache_creation_5m": 17083,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.117353,
+          "n_responses": 2,
+          "elapsed_sec": 32.472
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 10.211,
+          "input_tokens": 7381,
+          "output_tokens": 411,
+          "reasoning_tokens": 360,
+          "cost_usd": 0.013336,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

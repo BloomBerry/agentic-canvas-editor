@@ -1,0 +1,529 @@
+[
+  {
+    "id": "05c315e6-d290-418b-8b90-01b88abfa5dc",
+    "timestamp": 1780667201577,
+    "type": "user_request",
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "\n**Context**\nYou are a presentation-design agent with access to Figma Slides via tool calls.\nFollow the **Instruction** to modify the presentation.\nRefer to the **Tool Use Principles** and **Figma Slides Basics** for guidance.\n\n**Tool Use Principles**\n\nYour task is to produce an array of tool (function) calls necessary to modify the presentation in one turn.\nInclude every necessary tool (function) calls and do not output any text other than the function calls themselves.\n\n1. Plan first\nBriefly outline the key steps you will take.\n2. Be exhaustive\nConsider all parameters, options, ordering, and dependencies necessary to make the modification in one turn.\n3. Preserve existing content\nDo NOT delete or recreate elements that should remain unchanged. Only modify what the instruction asks for.\n\n4. Use batch_execute aggressively — it supports ALL commands\nbatch_execute works with EVERY tool command: creation (create_frame, create_text, create_math, create_rectangle, etc.), modification (set_text_font, set_fill_color, move_node, resize_node, etc.), and layout (set_layout_mode, set_padding, set_item_spacing, etc.).\nALWAYS prefer ONE batch_execute call over multiple individual tool calls. Each individual tool call costs a full API round-trip.\nCRITICAL: If you need to create or modify 3+ elements, ALWAYS use batch_execute — never call create_* or set_* individually in separate tool calls.\nExample — creating multiple elements + setting properties in one call:\n  batch_execute({ operations: [\n    { command: \"create_frame\", params: { x: 0, y: 0, width: 400, height: 40, name: \"Row 1\", parentId: \"1:10\" } },\n    { command: \"create_text\", params: { x: 10, y: 5, width: 380, text: \"Hello\", fontSize: 16, parentId: \"1:10\" } },\n    { command: \"set_text_font\", params: { nodeId: \"1:23\", fontFamily: \"Inter\", fontStyle: \"Bold\" } },\n    { command: \"set_fill_color\", params: { nodeId: \"1:67\", color: \"#FF0000\" } }\n  ] })\n\n5. Text layout quality\n- ALWAYS set an explicit **width** on text nodes to prevent text overflow and overlap with adjacent elements.\n- Predict the bounding box of every element BEFORE placing it. For text nodes, rendered height ≈ ceil(text_length_px / width) × fontSize × 1.3 (line-height). Use the predicted bounding box (x, y, width, rendered_height) to ensure NO overlap with any neighboring element in all directions — check that bounding boxes do not intersect horizontally or vertically.\n- For multi-column layouts, calculate column width = (available width) / num_columns.\n6. Avoid redundant discovery\n- NEVER call check_connection_status — the connection is already established.\n- NEVER call export_json or get_page_structure — the document structure is already provided or can be obtained more efficiently.\n- Do NOT call get_all_slides if slide IDs are already provided in the context.\n- Only use get_node_info or get_node_info_by_types when you need specific node details not already visible in the provided JSON.\n- After completing modifications, do NOT make extra verification calls (get_node_info, export_slide_image) — the tool results already confirm success or failure.\n\n7. Minimize API round-trips\n- Collect ALL changes across ALL slides into a SINGLE batch_execute call when possible, rather than processing slides one-by-one.\n- Do NOT alternate focus_slide → batch_execute per slide. Instead, gather every modification and execute in one batch.\n- focus_slide is only needed before creating new nodes. For existing node modifications, batch_execute with nodeId works directly regardless of which slide is focused.\n\n8. Handle node ID staleness\n- After deleting a slide or node, ALL child node IDs within it become invalid immediately.\n- If you need to reference other nodes after a delete, call get_all_slides or get_slide_grid first to refresh the list before proceeding.\n- NEVER batch a delete_slide together with operations that reference nodes on other slides in the same batch_execute — the delete may invalidate IDs mid-batch. Instead, split into: (1) batch for modifications, (2) separate batch for deletions.\n- NEVER batch a create_slide together with its child element operations (create_text, create_rectangle, etc.) in the same batch_execute — the new slide's ID is unknown until create_slide returns, so child elements cannot specify the correct parentId.\n- CRITICAL — create_slide is NEVER the final step. After creating slides, you MUST ALWAYS follow up with batch_execute to populate them with content (backgrounds, text, shapes, etc.). A blank slide is never acceptable.\n- CRITICAL — parentId after create_slide: When adding elements to a newly created slide, you MUST include parentId (the new slide's ID) in every create_* params. Without parentId, elements are placed on the previously focused slide, NOT on the new one. Required workflow:\n  Step 1: create_slide({ column: 3, name: \"Divider\" })  → returns { id: \"11:100\" }\n  Step 2 (MANDATORY): batch_execute({ operations: [\n    { command: \"create_rectangle\", params: { x: 0, y: 0, width: 1920, height: 1080, fillColor: { r: 0, g: 0.2, b: 0.063 }, parentId: \"11:100\" } },\n    { command: \"create_text\", params: { x: 100, y: 200, text: \"Thank You\", fontSize: 71, fontColor: { r: 0.78, g: 0.94, b: 0.31 }, parentId: \"11:100\" } }\n  ] })\n  NEVER stop after Step 1 — Step 2 is required to make the slide functional.\n- NEVER batch a create_slide together with reorder_slides in the same batch_execute — the new slide's ID is unknown until create_slide returns, so it cannot be included in the slideIds array. Instead: (1) create all new slides first, (2) then call reorder_slides with the complete list of slide IDs (existing + newly created) in the desired presentation order.\n9. Deliver\nBased on the plan, respond with the exact sequence of tool (function) calls it should run.\n\n\n**Figma Slides Basics**\n\n1. Figma Slides Basics\n- You are working with Figma Slides, a presentation tool built into Figma.\n- Each slide is a top-level container (similar to a frame) that holds content elements.\n- Slides are arranged in a grid layout. Each slide has a unique ID.\n- When creating or modifying content, the parentId should be a slide ID.\n\n2. Node Hierarchy\n- All content nodes live within slides. Slides are the top-level containers.\n- Parent-child links create the hierarchy within each slide.\n- Coordinates in `relativeTransform` and `move_node` are relative to the **parent node**, not the slide root. To position a child within a frame, use coordinates relative to that frame's origin (0, 0 = top-left of the parent frame).\n\n3. Content Elements\n- Slides can contain: text nodes, rectangles, ellipses, frames, groups, graphics (SVG), charts, tables.\n- Text nodes have font family, style, size, color, and alignment properties.\n- Shapes have fill color, stroke, corner radius, and opacity properties.\n\n4. Slide Management\n- focus_slide navigates the viewport to a slide. It is ONLY required before creating new nodes (create_text, create_rectangle, etc.) on that slide.\n- For modifying existing nodes (set_text_font, set_fill_color, move_node, resize_node, etc.), use batch_execute with nodeId directly — no focus_slide needed.\n- Each slide can have transitions and skip settings.\n\n5. Slide Ordering\n- Presentation order is determined by the internal children array, NOT by x/y coordinates. move_node does NOT change slide order.\n- To reorder slides, use reorder_slides with the full list of slide IDs in the desired order.\n- Example: reorder_slides({ slideIds: [\"id_intro\", \"id_about\", \"id_work\", \"id_contact\"] })\n\n6. Deck theme consistency (new slides and new blocks only)\n- When adding a new slide or major new content block, match the deck's existing styling. Do NOT default to white background + black text unless a comparable existing slide uses exactly that pattern.\n- Before populating a new slide: inspect 1–2 comparable slides (cover, section divider, Q&A/closing, table-of-contents, or adjacent content slides) for background fill, title fontFamily/fontSize/fontStyle, title color, and recurring decorative elements.\n- Copy those exact values via fillColor/fontColor on create_rectangle/create_text, or set_fill_color/set_text_font after creation.\n- For chart/theme recolor tasks: use replace_color with the exact source and target hex from the instruction; recolor only chart/data series elements, not unrelated branding or body text.\n- Do NOT restyle existing slides or nodes unless the instruction explicitly asks for it.\n\n\n\n**Context Mode: Micro-Spatial (Targeted Editing)**\nYou are editing specific slide(s) in a Figma Slides presentation.\n- Below you will find the FULL scene graph for the target slide(s) only.\n- Other slides exist in the presentation but are summarised minimally (ID and name only).\n- The full document has already been imported into Figma – all nodes exist.\n- Use the node IDs from the scene graph to reference existing elements directly via batch_execute.\n\n**Coordinate System**\n- Each node's `relativeTransform` gives its position relative to its **parent frame**: `[[a, b, tx], [c, d, ty]]` where `tx` and `ty` are the x/y offsets from the parent origin.\n- `move_node` sets **parent-relative** coordinates (same as relativeTransform tx/ty). Always derive move_node x/y from relativeTransform values, NOT from absoluteBoundingBox.\n- `size` gives width and height. Use `resize_node` to change dimensions.\n\n\n**Presentation Overview**\nThe presentation has 1 slide(s) total.\n\n**Target Slide(s) Scene Graph**\n```json\n{\"fileName\": \"AnimalResearchPoster\", \"slideCount\": 1, \"targetSlides\": [{\"slideIndex\": 0, \"slideNumber\": 1, \"nodeId\": \"1:34\", \"name\": \"Frame\", \"sceneGraph\": {\"id\": \"1:34\", \"name\": \"Frame\", \"type\": \"FRAME\", \"bounds\": [0, 0, 1920, 1080], \"pos\": [0.0, 0.0], \"size\": [1920.0, 1080.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\"}], \"strokeWeight\": 1.0, \"clipsContent\": true, \"children\": [{\"id\": \"1:35\", \"name\": \"Background\", \"type\": \"RECTANGLE\", \"bounds\": [0, 0, 1920, 1080], \"pos\": [0.0, 0.0], \"size\": [1920.0, 1080.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#8777c6\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:36\", \"name\": \"Header Banner\", \"type\": \"RECTANGLE\", \"bounds\": [770, 25, 380, 50], \"pos\": [770.0, 25.0], \"size\": [380.0, 50.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#548c3d\"}], \"strokeWeight\": 1.0, \"cornerRadius\": 30.0}, {\"id\": \"1:37\", \"name\": \"Header Text\", \"type\": \"TEXT\", \"bounds\": [827, 37, 279, 24], \"pos\": [827.0, 37.0], \"size\": [279.0, 24.0], \"characters\": \"ANIMAL RESEARCH POSTER\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 20.0, \"textAlignHorizontal\": \"CENTER\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 24.204544067382812}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:38\", \"name\": \"Title\", \"type\": \"TEXT\", \"bounds\": [683, 70, 536, 97], \"pos\": [683.0, 70.0], \"size\": [536.0, 97.0], \"characters\": \"THE TOUCAN\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Black\", \"fontWeight\": 900, \"fontSize\": 80.0, \"textAlignHorizontal\": \"CENTER\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 96.81817626953125}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#edd159\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:39\", \"name\": \"Intro Text\", \"type\": \"TEXT\", \"bounds\": [680, 165, 500, 60], \"pos\": [680.0, 165.0], \"size\": [500.0, 60.0], \"characters\": \"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Auctor augue mauris augue neque.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 13.0, \"textAlignHorizontal\": \"CENTER\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 15.732954025268555}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:40\", \"name\": \"Toucan Photo\", \"type\": \"FRAME\", \"bounds\": [672, 264, 520, 416], \"pos\": [672.0, 264.0], \"size\": [520.0, 416.0], \"strokeWeight\": 1.0, \"layoutMode\": \"VERTICAL\", \"itemSpacing\": 4.0, \"layoutSizingHorizontal\": \"HUG\", \"layoutSizingVertical\": \"HUG\", \"clipsContent\": true, \"children\": [{\"id\": \"1:41\", \"name\": \"Photo\", \"type\": \"RECTANGLE\", \"bounds\": [672, 264, 520, 400], \"pos\": [0.0, 0.0], \"size\": [520.0, 400.0], \"fills\": [{\"type\": \"IMAGE\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:42\", \"name\": \"Attribution\", \"type\": \"TEXT\", \"bounds\": [672, 668, 180, 12], \"pos\": [0.0, 404.0], \"size\": [180.0, 12.0], \"characters\": \"Photo by Shannon Potter on Unsplash\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 10.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 12.102272033691406}, \"characterStyleOverrides\": [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1], \"styleOverrideTable\": {\"1\": {\"textDecoration\": \"UNDERLINE\"}}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#666666\"}], \"strokeWeight\": 1.0}]}, {\"id\": \"1:43\", \"name\": \"Leaf Top Left\", \"type\": \"FRAME\", \"bounds\": [0, 0, 180, 260], \"pos\": [0.0, 0.0], \"size\": [180.0, 260.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"visible\": false}], \"strokeWeight\": 1.0, \"clipsContent\": true, \"children\": [{\"id\": \"1:44\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [10, 10, 150, 250], \"pos\": [10.0, 10.0], \"size\": [150.0, 250.0], \"opacity\": 0.8, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#2d7a3a\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:45\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [30, 25, 125, 225], \"pos\": [30.0, 25.0], \"size\": [125.0, 225.0], \"opacity\": 0.7, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#3d8b4a\"}], \"strokeWeight\": 1.0}]}, {\"id\": \"1:46\", \"name\": \"Leaf Top Right\", \"type\": \"FRAME\", \"bounds\": [1720, 0, 200, 280], \"pos\": [1720.0, 0.0], \"size\": [200.0, 280.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"visible\": false}], \"strokeWeight\": 1.0, \"clipsContent\": true, \"children\": [{\"id\": \"1:47\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [1760, 10, 150, 250], \"pos\": [40.0, 10.0], \"size\": [150.0, 250.0], \"opacity\": 0.8, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#2d7a3a\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:48\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [1765, 25, 125, 225], \"pos\": [45.0, 25.0], \"size\": [125.0, 225.0], \"opacity\": 0.6, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#1d6a2a\"}], \"strokeWeight\": 1.0}]}, {\"id\": \"1:49\", \"name\": \"Eye Circle\", \"type\": \"ELLIPSE\", \"bounds\": [100, 235, 90, 90], \"pos\": [100.0, 235.0], \"size\": [90.0, 90.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"opacity\": 0.9}], \"strokeWeight\": 1.0}, {\"id\": \"1:50\", \"name\": \"Eye Icon\", \"type\": \"FRAME\", \"bounds\": [125, 266, 40, 28], \"pos\": [125.0, 266.0], \"size\": [40.0, 28.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"visible\": false}], \"strokeWeight\": 1.0, \"clipsContent\": true, \"children\": [{\"id\": \"1:51\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [127, 268, 36, 24], \"pos\": [2.0, 2.0], \"size\": [36.0, 24.0], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#4a4a8a\", \"weight\": 2.0}]}, {\"id\": \"1:52\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [138, 273, 14, 14], \"pos\": [13.0, 7.0], \"size\": [14.0, 14.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#4a4a8a\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:53\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [145, 276, 4, 4], \"pos\": [20.0, 10.0], \"size\": [4.0, 4.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\"}], \"strokeWeight\": 1.0}]}, {\"id\": \"1:54\", \"name\": \"Eyes Title\", \"type\": \"TEXT\", \"bounds\": [80, 335, 88, 22], \"pos\": [80.0, 335.0], \"size\": [88.0, 22.0], \"characters\": \"THE EYES\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 21.784090042114258}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#edd159\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:55\", \"name\": \"Eyes Description\", \"type\": \"TEXT\", \"bounds\": [80, 360, 200, 50], \"pos\": [80.0, 360.0], \"size\": [200.0, 50.0], \"characters\": \"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 10.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 12.102272033691406}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:56\", \"name\": \"Eye Line\", \"type\": \"FRAME\", \"bounds\": [195, 280, 500, 4], \"pos\": [195.0, 280.0], \"size\": [500.0, 4.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"visible\": false}], \"strokeWeight\": 1.0, \"clipsContent\": true, \"children\": [{\"id\": \"1:57\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [195, 282, 500, 0], \"pos\": [0.0, 2.0], \"size\": [500.0, 0.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#000000\"}], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"weight\": 2.0}]}]}, {\"id\": \"1:58\", \"name\": \"Feather Circle\", \"type\": \"ELLIPSE\", \"bounds\": [100, 440, 90, 90], \"pos\": [100.0, 440.0], \"size\": [90.0, 90.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"opacity\": 0.9}], \"strokeWeight\": 1.0}, {\"id\": \"1:59\", \"name\": \"Feather Icon\", \"type\": \"FRAME\", \"bounds\": [128, 468, 35, 35], \"pos\": [128.0, 468.0], \"size\": [35.0, 35.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"visible\": false}], \"strokeWeight\": 1.0, \"clipsContent\": true, \"children\": [{\"id\": \"1:60\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [133, 473, 25, 25], \"pos\": [5.0, 5.0], \"size\": [25.0, 25.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#4a4a8a\"}], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#4a4a8a\", \"weight\": 1.0}]}, {\"id\": \"1:61\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [133, 475, 23, 23], \"pos\": [5.0, 7.0], \"size\": [23.0, 23.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#000000\"}], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#6a6aaa\", \"weight\": 1.5}]}]}, {\"id\": \"1:62\", \"name\": \"Feathers Title\", \"type\": \"TEXT\", \"bounds\": [60, 540, 135, 22], \"pos\": [60.0, 540.0], \"size\": [135.0, 22.0], \"characters\": \"THE FEATHERS\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 21.784090042114258}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#edd159\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:63\", \"name\": \"Feathers Description\", \"type\": \"TEXT\", \"bounds\": [60, 565, 220, 60], \"pos\": [60.0, 565.0], \"size\": [220.0, 60.0], \"characters\": \"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 10.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 12.102272033691406}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:64\", \"name\": \"Feather Line\", \"type\": \"FRAME\", \"bounds\": [195, 485, 500, 4], \"pos\": [195.0, 485.0], \"size\": [500.0, 4.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"visible\": false}], \"strokeWeight\": 1.0, \"clipsContent\": true, \"children\": [{\"id\": \"1:65\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [195, 487, 500, 0], \"pos\": [0.0, 2.0], \"size\": [500.0, 0.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#000000\"}], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"weight\": 2.0}]}]}, {\"id\": \"1:66\", \"name\": \"Beak Circle\", \"type\": \"ELLIPSE\", \"bounds\": [1680, 320, 90, 90], \"pos\": [1680.0, 320.0], \"size\": [90.0, 90.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:67\", \"name\": \"Beak Icon\", \"type\": \"FRAME\", \"bounds\": [1705, 356, 40, 32], \"pos\": [1705.0, 356.0], \"size\": [40.0, 32.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"visible\": false}], \"strokeWeight\": 1.0, \"clipsContent\": true, \"children\": [{\"id\": \"1:68\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [1707, 361, 36, 22], \"pos\": [2.0, 5.0], \"size\": [36.0, 22.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#e8a020\"}], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#5b4a28\", \"weight\": 1.5}]}, {\"id\": \"1:69\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [1732, 366, 5, 5], \"pos\": [27.5, 9.5], \"size\": [5.0, 5.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#1a1a1a\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:70\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [1715, 370, 10, 4], \"pos\": [10.0, 14.0], \"size\": [10.0, 4.0], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#5b4a28\", \"weight\": 1.0}]}]}, {\"id\": \"1:71\", \"name\": \"Beak Title\", \"type\": \"TEXT\", \"bounds\": [1648, 415, 90, 22], \"pos\": [1648.0, 415.0], \"size\": [90.0, 22.0], \"characters\": \"THE BEAK\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 18.0, \"textAlignHorizontal\": \"RIGHT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 21.784090042114258}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ddc147\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:72\", \"name\": \"Beak Description\", \"type\": \"TEXT\", \"bounds\": [1650, 442, 220, 89], \"pos\": [1650.0, 442.0], \"size\": [220.0, 89.0], \"characters\": \"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 10.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 12.102272033691406}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:73\", \"name\": \"Beak Line\", \"type\": \"FRAME\", \"bounds\": [1180, 383, 500, 4], \"pos\": [1180.0, 383.0], \"size\": [500.0, 4.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"visible\": false}], \"strokeWeight\": 1.0, \"clipsContent\": true, \"children\": [{\"id\": \"1:74\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [1180, 385, 500, 0], \"pos\": [0.0, 2.0], \"size\": [500.0, 0.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#000000\"}], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"weight\": 1.5}]}]}, {\"id\": \"1:75\", \"name\": \"Claws Circle\", \"type\": \"ELLIPSE\", \"bounds\": [1680, 545, 90, 90], \"pos\": [1680.0, 545.0], \"size\": [90.0, 90.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:76\", \"name\": \"Claws Icon\", \"type\": \"FRAME\", \"bounds\": [1700, 565, 36, 40], \"pos\": [1700.0, 565.0], \"size\": [36.0, 40.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"visible\": false}], \"strokeWeight\": 1.0, \"clipsContent\": true, \"children\": [{\"id\": \"1:77\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [1718, 567, 0, 16], \"pos\": [18.0, 2.0], \"size\": [0.0, 16.0], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#e8a020\", \"weight\": 3.0}]}, {\"id\": \"1:78\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [1708, 583, 10, 20], \"pos\": [8.0, 18.0], \"size\": [10.0, 20.0], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#e8a020\", \"weight\": 2.5}]}, {\"id\": \"1:79\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [1714, 583, 4, 20], \"pos\": [14.0, 18.0], \"size\": [4.0, 20.0], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#e8a020\", \"weight\": 2.5}]}, {\"id\": \"1:80\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [1718, 583, 4, 20], \"pos\": [18.0, 18.0], \"size\": [4.0, 20.0], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#e8a020\", \"weight\": 2.5}]}, {\"id\": \"1:81\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [1718, 583, 10, 20], \"pos\": [18.0, 18.0], \"size\": [10.0, 20.0], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#e8a020\", \"weight\": 2.5}]}]}, {\"id\": \"1:82\", \"name\": \"Claws Title\", \"type\": \"TEXT\", \"bounds\": [1647, 645, 108, 22], \"pos\": [1647.0, 645.0], \"size\": [108.0, 22.0], \"characters\": \"THE CLAWS\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 18.0, \"textAlignHorizontal\": \"RIGHT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 21.784090042114258}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ddc147\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:83\", \"name\": \"Claws Description\", \"type\": \"TEXT\", \"bounds\": [1650, 670, 220, 50], \"pos\": [1650.0, 670.0], \"size\": [220.0, 50.0], \"characters\": \"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 10.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 12.102272033691406}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:84\", \"name\": \"Claws Line\", \"type\": \"FRAME\", \"bounds\": [1180, 588, 500, 4], \"pos\": [1180.0, 588.0], \"size\": [500.0, 4.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"visible\": false}], \"strokeWeight\": 1.0, \"clipsContent\": true, \"children\": [{\"id\": \"1:85\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [1180, 590, 500, 0], \"pos\": [0.0, 2.0], \"size\": [500.0, 0.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#000000\"}], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"weight\": 1.5}]}]}, {\"id\": \"1:86\", \"name\": \"Green Section BG\", \"type\": \"RECTANGLE\", \"bounds\": [0, 730, 1920, 140], \"pos\": [0.0, 730.0], \"size\": [1920.0, 140.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#478c51\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:87\", \"name\": \"World Map Icon\", \"type\": \"FRAME\", \"bounds\": [80, 755, 80, 50], \"pos\": [80.0, 755.0], \"size\": [80.0, 50.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"visible\": false}], \"strokeWeight\": 1.0, \"clipsContent\": true, \"children\": [{\"id\": \"1:88\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [82, 757, 76, 46], \"pos\": [2.0, 2.0], \"size\": [76.0, 46.0], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#4caf50\", \"weight\": 1.5}]}, {\"id\": \"1:89\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [98, 763, 11, 34], \"pos\": [18.0, 8.0], \"size\": [10.5, 34.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#2e7d32\"}], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#4caf50\", \"weight\": 1.5}]}, {\"id\": \"1:90\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [115, 760, 36, 37], \"pos\": [35.0, 5.0], \"size\": [36.3, 37.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#2e7d32\"}], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#4caf50\", \"weight\": 1.5}]}]}, {\"id\": \"1:91\", \"name\": \"Population Title\", \"type\": \"TEXT\", \"bounds\": [200, 755, 118, 22], \"pos\": [200.0, 755.0], \"size\": [118.0, 22.0], \"characters\": \"POPULATION\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 21.784090042114258}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ddc147\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:92\", \"name\": \"Population Description\", \"type\": \"TEXT\", \"bounds\": [200, 780, 280, 60], \"pos\": [200.0, 780.0], \"size\": [280.0, 60.0], \"characters\": \"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Auctor augue mauris augue neque.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 10.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 12.102272033691406}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:93\", \"name\": \"Section Divider Dots\", \"type\": \"FRAME\", \"bounds\": [550, 745, 4, 110], \"pos\": [550.0, 745.0], \"size\": [4.0, 110.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"visible\": false}], \"strokeWeight\": 1.0, \"clipsContent\": true, \"children\": [{\"id\": \"1:94\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [552, 745, 0, 110], \"pos\": [2.0, 0.0], \"size\": [0.0, 110.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#000000\"}], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#7bc67e\", \"weight\": 2.0}]}]}, {\"id\": \"1:95\", \"name\": \"Leaf Icon\", \"type\": \"FRAME\", \"bounds\": [590, 755, 40, 40], \"pos\": [590.0, 755.0], \"size\": [40.0, 40.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"visible\": false}], \"strokeWeight\": 1.0, \"clipsContent\": true, \"children\": [{\"id\": \"1:96\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [598, 763, 18, 25], \"pos\": [8.0, 8.0], \"size\": [18.2, 24.9], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#4caf50\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:97\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [598, 763, 17, 24], \"pos\": [8.0, 8.0], \"size\": [17.0, 24.0], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#2e7d32\", \"weight\": 1.5}]}]}, {\"id\": \"1:98\", \"name\": \"Fruit Icon\", \"type\": \"FRAME\", \"bounds\": [660, 755, 40, 40], \"pos\": [660.0, 755.0], \"size\": [40.0, 40.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"visible\": false}], \"strokeWeight\": 1.0, \"clipsContent\": true, \"children\": [{\"id\": \"1:99\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [666, 761, 28, 32], \"pos\": [6.0, 6.0], \"size\": [28.0, 32.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#e85d3a\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:100\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [678, 758, 6, 5], \"pos\": [18.0, 3.4], \"size\": [6.0, 4.6], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#2e7d32\", \"weight\": 1.5}]}, {\"id\": \"1:101\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [680, 763, 0, 4], \"pos\": [20.0, 8.0], \"size\": [0.0, 4.0], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#2e7d32\", \"weight\": 1.0}]}]}, {\"id\": \"1:102\", \"name\": \"Diet Labels\", \"type\": \"TEXT\", \"bounds\": [577, 800, 69, 10], \"pos\": [577.0, 800.0], \"size\": [69.0, 10.0], \"characters\": \"PLANTS    FRUITS\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 8.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 9.681818008422852}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:103\", \"name\": \"Section Divider Dots 2\", \"type\": \"FRAME\", \"bounds\": [760, 745, 4, 110], \"pos\": [760.0, 745.0], \"size\": [4.0, 110.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"visible\": false}], \"strokeWeight\": 1.0, \"clipsContent\": true, \"children\": [{\"id\": \"1:104\", \"name\": \"Vector\", \"type\": \"VECTOR\", \"bounds\": [762, 745, 0, 110], \"pos\": [2.0, 0.0], \"size\": [0.0, 110.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#000000\"}], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#7bc67e\", \"weight\": 2.0}]}]}, {\"id\": \"1:105\", \"name\": \"Diet Title\", \"type\": \"TEXT\", \"bounds\": [800, 755, 124, 22], \"pos\": [800.0, 755.0], \"size\": [124.0, 22.0], \"characters\": \"TOUCAN DIET\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 21.784090042114258}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ddc147\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:106\", \"name\": \"Diet Description\", \"type\": \"TEXT\", \"bounds\": [800, 780, 260, 60], \"pos\": [800.0, 780.0], \"size\": [260.0, 60.0], \"characters\": \"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna. Lorem ipsum dolor sit amet.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 10.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 12.102272033691406}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:107\", \"name\": \"Yellow Section BG\", \"type\": \"RECTANGLE\", \"bounds\": [0, 880, 1920, 200], \"pos\": [0.0, 880.0], \"size\": [1920.0, 200.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#edd88c\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:108\", \"name\": \"Point 1 Box\", \"type\": \"RECTANGLE\", \"bounds\": [60, 895, 200, 170], \"pos\": [60.0, 895.0], \"size\": [200.0, 170.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\"}], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#bfb28c\", \"weight\": 1.5}], \"cornerRadius\": 8.0}, {\"id\": \"1:109\", \"name\": \"Point 1 Number\", \"type\": \"TEXT\", \"bounds\": [139, 900, 24, 58], \"pos\": [139.0, 900.0], \"size\": [24.0, 58.0], \"characters\": \"1\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 48.0, \"textAlignHorizontal\": \"CENTER\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 58.09090805053711}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#7259a5\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:110\", \"name\": \"Point 1 Label\", \"type\": \"TEXT\", \"bounds\": [115, 955, 55, 15], \"pos\": [115.0, 955.0], \"size\": [55.0, 15.0], \"characters\": \"POINT 01\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 12.0, \"textAlignHorizontal\": \"CENTER\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 14.522727012634277}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#7259a5\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:111\", \"name\": \"Point 1 Text\", \"type\": \"TEXT\", \"bounds\": [80, 980, 160, 50], \"pos\": [80.0, 980.0], \"size\": [160.0, 50.0], \"characters\": \"Lorem ipsum dolor sit amet, consectetur adipiscing.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 10.0, \"textAlignHorizontal\": \"CENTER\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 12.102272033691406}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#666666\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:112\", \"name\": \"Point 2 Box\", \"type\": \"RECTANGLE\", \"bounds\": [280, 895, 200, 170], \"pos\": [280.0, 895.0], \"size\": [200.0, 170.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\"}], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#bfb28c\", \"weight\": 1.5}], \"cornerRadius\": 8.0}, {\"id\": \"1:113\", \"name\": \"Point 2 Number\", \"type\": \"TEXT\", \"bounds\": [365, 900, 31, 58], \"pos\": [365.0, 900.0], \"size\": [31.0, 58.0], \"characters\": \"2\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 48.0, \"textAlignHorizontal\": \"CENTER\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 58.09090805053711}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#7259a5\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:114\", \"name\": \"Point 2 Label\", \"type\": \"TEXT\", \"bounds\": [334, 955, 56, 15], \"pos\": [334.0, 955.0], \"size\": [56.0, 15.0], \"characters\": \"POINT 02\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 12.0, \"textAlignHorizontal\": \"CENTER\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 14.522727012634277}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#7259a5\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:115\", \"name\": \"Point 2 Text\", \"type\": \"TEXT\", \"bounds\": [300, 980, 160, 50], \"pos\": [300.0, 980.0], \"size\": [160.0, 50.0], \"characters\": \"Lorem ipsum dolor sit amet, consectetur adipiscing.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 10.0, \"textAlignHorizontal\": \"CENTER\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 12.102272033691406}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#666666\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:116\", \"name\": \"Point 3 Box\", \"type\": \"RECTANGLE\", \"bounds\": [500, 895, 200, 170], \"pos\": [500.0, 895.0], \"size\": [200.0, 170.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\"}], \"strokes\": [{\"type\": \"SOLID\", \"color\": \"#bfb28c\", \"weight\": 1.5}], \"cornerRadius\": 8.0}, {\"id\": \"1:117\", \"name\": \"Point 3 Number\", \"type\": \"TEXT\", \"bounds\": [584, 900, 32, 58], \"pos\": [584.0, 900.0], \"size\": [32.0, 58.0], \"characters\": \"3\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 48.0, \"textAlignHorizontal\": \"CENTER\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 58.09090805053711}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#7259a5\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:118\", \"name\": \"Point 3 Label\", \"type\": \"TEXT\", \"bounds\": [555, 955, 56, 15], \"pos\": [555.0, 955.0], \"size\": [56.0, 15.0], \"characters\": \"POINT 03\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"CENTER\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 14.522727012634277}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#7259a5\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:119\", \"name\": \"Point 3 Text\", \"type\": \"TEXT\", \"bounds\": [520, 980, 160, 50], \"pos\": [520.0, 980.0], \"size\": [160.0, 50.0], \"characters\": \"Lorem ipsum dolor sit amet, consectetur adipiscing.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 10.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 12.102272033691406}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#333333\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:120\", \"name\": \"Fun Facts Box\", \"type\": \"RECTANGLE\", \"bounds\": [740, 895, 460, 170], \"pos\": [740.0, 895.0], \"size\": [460.0, 170.0], \"fills\": [{\"type\": \"SOLID\", \"color\": \"#ffffff\", \"opacity\": 0.95}], \"strokeWeight\": 1.0, \"cornerRadius\": 8.0}, {\"id\": \"1:121\", \"name\": \"Fun Facts Title\", \"type\": \"TEXT\", \"bounds\": [760, 905, 112, 24], \"pos\": [760.0, 905.0], \"size\": [112.0, 24.0], \"characters\": \"FUN FACTS\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 20.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 24.204544067382812}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#33260c\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:122\", \"name\": \"Fun Facts Text\", \"type\": \"TEXT\", \"bounds\": [760, 935, 300, 120], \"pos\": [760.0, 935.0], \"size\": [300.0, 120.0], \"characters\": \"\\u2022 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.\\n\\n\\u2022 Lorem ipsum dolor sit amet, consectetur adipiscing elit.\\n\\n\\u2022 Lorem ipsum dolor sit amet, consectetur adipiscing elit.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 10.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 12.102272033691406}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#3f3f3f\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:123\", \"name\": \"Fun Facts Toucan\", \"type\": \"FRAME\", \"bounds\": [1100, 909, 90, 160], \"pos\": [1100.0, 909.0], \"size\": [90.0, 160.0], \"strokeWeight\": 1.0, \"layoutMode\": \"VERTICAL\", \"itemSpacing\": 4.0, \"layoutSizingHorizontal\": \"FIXED\", \"layoutSizingVertical\": \"HUG\", \"clipsContent\": true, \"children\": [{\"id\": \"1:124\", \"name\": \"Photo\", \"type\": \"RECTANGLE\", \"bounds\": [1100, 909, 90, 120], \"pos\": [0.0, 0.0], \"size\": [90.0, 120.0], \"fills\": [{\"type\": \"IMAGE\"}], \"strokeWeight\": 1.0}, {\"id\": \"1:125\", \"name\": \"Attribution\", \"type\": \"TEXT\", \"bounds\": [1100, 1033, 90, 36], \"pos\": [0.0, 124.0], \"size\": [90.0, 36.0], \"characters\": \"Photo by Juan Carlos Trujillo on Unsplash\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 10.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 12.102272033691406}, \"characterStyleOverrides\": [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1], \"styleOverrideTable\": {\"1\": {\"textDecoration\": \"UNDERLINE\"}}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#666666\"}], \"strokeWeight\": 1.0}]}, {\"id\": \"1:126\", \"name\": \"Source Citations\", \"type\": \"TEXT\", \"bounds\": [60, 1068, 149, 10], \"pos\": [60.0, 1068.0], \"size\": [149.0, 10.0], \"characters\": \"SOURCES: ADD LINKS/SOURCES HERE\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 8.0, \"textAlignHorizontal\": \"LEFT\", \"textAlignVertical\": \"TOP\", \"letterSpacing\": 0.0, \"lineHeightPx\": 9.681818008422852}, \"fills\": [{\"type\": \"SOLID\", \"color\": \"#4c4c4c\"}], \"strokeWeight\": 1.0}]}}], \"otherSlides\": []}\n```\n\n**Instruction**\nReplace 'Lorem Ipsum' with factual info for toucan research poster. Adjust font sizes and update source citations.\n\n\n---\nLoaded document structure (use these node IDs in your tool calls):\nRetrieved page structure for \"Page 1\""
+      }
+    ]
+  },
+  {
+    "id": "msg_011YyMieGvvc5ZaTbYXyyeeK",
+    "timestamp": 1780667236177,
+    "type": "agent_request",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "I'll analyze the slide content and replace all Lorem Ipsum text with factual toucan information, adjust font sizes for readability, and update source citations.\n\n**Plan:**\n1. Replace Intro Text with factual toucan introduction\n2. Replace Eyes Description with facts about toucan eyes\n3. Replace Feathers Description with facts about toucan feathers\n4. Replace Beak Description with facts about toucan beak\n5. Replace Claws Description with facts about toucan claws\n6. Replace Population Description with facts about toucan population\n7. Replace Diet Description with facts about toucan diet\n8. Replace Point 1, 2, 3 texts with key facts\n9. Replace Fun Facts text with real fun facts\n10. Update Source Citations\n11. Adjust font sizes where needed"
+      }
+    ],
+    "calls": [
+      {
+        "id": "toolu_01QVmpjvWYypPoMF3x6qhnfW",
+        "call_id": "",
+        "name": "batch_execute",
+        "arguments": {
+          "operations": [
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:39",
+                "text": "Toucans are vibrant tropical birds found in the rainforests of Central and South America. Known for their oversized, colorful bills, they belong to the family Ramphastidae and are closely related to woodpeckers. There are over 40 species of toucans in the world."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:39",
+                "fontSize": 11
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:55",
+                "text": "Toucans have small, round eyes surrounded by bright patches of bare skin. Their keen eyesight helps them spot ripe fruit in dense forest canopies. The eye ring can be blue, green, or red depending on the species."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:55",
+                "fontSize": 10
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:63",
+                "text": "Toucan feathers are predominantly black with splashes of white, yellow, red, and orange. The colorful plumage serves as camouflage in the dappled light of the rainforest and plays a role in attracting mates during breeding season."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:63",
+                "fontSize": 10
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:72",
+                "text": "The toucan's bill can be up to half the length of its body — up to 20 cm long. Despite its size, the bill is lightweight, made of keratin with a honeycomb bone structure inside. It is used to reach fruit, regulate body temperature, and deter predators."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:72",
+                "fontSize": 10
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:83",
+                "text": "Toucans have zygodactyl feet — two toes pointing forward and two backward — giving them a strong grip on branches. Their sharp claws allow them to perch securely in the forest canopy and move nimbly between trees."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:83",
+                "fontSize": 10
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:92",
+                "text": "Toucans are native to the Neotropical region, ranging from southern Mexico through Central America to northern Argentina and Bolivia. They inhabit tropical and subtropical forests at elevations up to 1,800 m. Some species are endangered due to habitat loss and the illegal pet trade."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:92",
+                "fontSize": 10
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:106",
+                "text": "Toucans are primarily frugivores, feeding on a wide variety of tropical fruits such as figs, berries, and palm fruits. They also supplement their diet with insects, small lizards, eggs, and nestlings of other birds, making them opportunistic omnivores."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:106",
+                "fontSize": 10
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:111",
+                "text": "Toucans nest in tree cavities, often using holes made by woodpeckers. Both parents share incubation duties for 15–18 days."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:111",
+                "fontSize": 10
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:110",
+                "text": "NESTING"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:115",
+                "text": "Toucans are social birds that live in small flocks of 6–20 individuals. They communicate using loud, frog-like croaking calls that echo through the forest."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:115",
+                "fontSize": 10
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:114",
+                "text": "BEHAVIOR"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:119",
+                "text": "Toucans play a vital ecological role as seed dispersers. They swallow fruit whole and excrete seeds far from the parent tree, helping regenerate tropical forests."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:119",
+                "fontSize": 10,
+                "textAlign": "CENTER"
+              }
+            },
+            {
+              "command": "set_fill_color",
+              "params": {
+                "nodeId": "1:119",
+                "color": {
+                  "r": 0.4,
+                  "g": 0.4,
+                  "b": 0.4
+                }
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:118",
+                "text": "ECOLOGY"
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:118",
+                "fontSize": 12
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:122",
+                "text": "• A toucan's bill can be up to 20 cm long — nearly half its total body length of ~55 cm.\n\n• Toucans sleep by tucking their bill under their wing and folding their tail over their back to conserve space.\n\n• The Toco Toucan (Ramphastos toco) is the largest toucan species, weighing up to 680 grams."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:122",
+                "fontSize": 10
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:126",
+                "text": "SOURCES: National Geographic (nationalgeographic.com/animals/birds/facts/toucan) | Cornell Lab of Ornithology — Birds of the World (birdsoftheworld.org) | IUCN Red List (iucnredlist.org) | Smithsonian's National Zoo (nationalzoo.si.edu)"
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:126",
+                "fontSize": 8
+              }
+            },
+            {
+              "command": "resize_node",
+              "params": {
+                "nodeId": "1:126",
+                "width": 1800,
+                "height": 12
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "30c62136-4971-4d79-8b2d-ff9af27521dc",
+    "timestamp": 1780667236797,
+    "role": "tool",
+    "type": "tool_response",
+    "content": [
+      {
+        "type": "text",
+        "text": "Batch executed 30 operations: 30/30 succeeded\n{\n  \"results\": [\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6900\",\n        \"text\": \"Toucans are vibrant tropical birds found in the rainforests of Central and South America. Known for their oversized, colorful bills, they belong to the family Ramphastidae and are closely related to woodpeckers. There are over 40 species of toucans in the world.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6900\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6916\",\n        \"text\": \"Toucans have small, round eyes surrounded by bright patches of bare skin. Their keen eyesight helps them spot ripe fruit in dense forest canopies. The eye ring can be blue, green, or red depending on the species.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6916\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6924\",\n        \"text\": \"Toucan feathers are predominantly black with splashes of white, yellow, red, and orange. The colorful plumage serves as camouflage in the dappled light of the rainforest and plays a role in attracting mates during breeding season.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6924\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6933\",\n        \"text\": \"The toucan's bill can be up to half the length of its body — up to 20 cm long. Despite its size, the bill is lightweight, made of keratin with a honeycomb bone structure inside. It is used to reach fruit, regulate body temperature, and deter predators.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6933\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6944\",\n        \"text\": \"Toucans have zygodactyl feet — two toes pointing forward and two backward — giving them a strong grip on branches. Their sharp claws allow them to perch securely in the forest canopy and move nimbly between trees.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6944\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6953\",\n        \"text\": \"Toucans are native to the Neotropical region, ranging from southern Mexico through Central America to northern Argentina and Bolivia. They inhabit tropical and subtropical forests at elevations up to 1,800 m. Some species are endangered due to habitat loss and the illegal pet trade.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6953\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6967\",\n        \"text\": \"Toucans are primarily frugivores, feeding on a wide variety of tropical fruits such as figs, berries, and palm fruits. They also supplement their diet with insects, small lizards, eggs, and nestlings of other birds, making them opportunistic omnivores.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6967\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6972\",\n        \"text\": \"Toucans nest in tree cavities, often using holes made by woodpeckers. Both parents share incubation duties for 15–18 days.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6972\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6971\",\n        \"text\": \"NESTING\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6976\",\n        \"text\": \"Toucans are social birds that live in small flocks of 6–20 individuals. They communicate using loud, frog-like croaking calls that echo through the forest.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6976\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6975\",\n        \"text\": \"BEHAVIOR\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6980\",\n        \"text\": \"Toucans play a vital ecological role as seed dispersers. They swallow fruit whole and excrete seeds far from the parent tree, helping regenerate tropical forests.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6980\"\n      }\n    },\n    {\n      \"command\": \"set_fill_color\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6980\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6979\",\n        \"text\": \"ECOLOGY\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6979\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6983\",\n        \"text\": \"• A toucan's bill can be up to 20 cm long — nearly half its total body length of ~55 cm.\\n\\n• Toucans sleep by tucking their bill under their wing and folding their tail over their back to conserve space.\\n\\n• The Toco Toucan (Ramphastos toco) is the largest toucan species, weighing up to 680 grams.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6983\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6987\",\n        \"text\": \"SOURCES: National Geographic (nationalgeographic.com/animals/birds/facts/toucan) | Cornell Lab of Ornithology — Birds of the World (birdsoftheworld.org) | IUCN Red List (iucnredlist.org) | Smithsonian's National Zoo (nationalzoo.si.edu)\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6987\"\n      }\n    },\n    {\n      \"command\": \"resize_node\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6987\",\n        \"width\": 1800,\n        \"height\": 12\n      }\n    }\n  ],\n  \"total\": 30,\n  \"succeeded\": 30\n}"
+      }
+    ],
+    "results": [
+      {
+        "id": "toolu_01QVmpjvWYypPoMF3x6qhnfW",
+        "call_id": "",
+        "name": "batch_execute",
+        "content": [
+          {
+            "type": "text",
+            "text": "Batch executed 30 operations: 30/30 succeeded"
+          },
+          {
+            "type": "text",
+            "text": "{\n  \"results\": [\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6900\",\n        \"text\": \"Toucans are vibrant tropical birds found in the rainforests of Central and South America. Known for their oversized, colorful bills, they belong to the family Ramphastidae and are closely related to woodpeckers. There are over 40 species of toucans in the world.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6900\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6916\",\n        \"text\": \"Toucans have small, round eyes surrounded by bright patches of bare skin. Their keen eyesight helps them spot ripe fruit in dense forest canopies. The eye ring can be blue, green, or red depending on the species.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6916\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6924\",\n        \"text\": \"Toucan feathers are predominantly black with splashes of white, yellow, red, and orange. The colorful plumage serves as camouflage in the dappled light of the rainforest and plays a role in attracting mates during breeding season.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6924\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6933\",\n        \"text\": \"The toucan's bill can be up to half the length of its body — up to 20 cm long. Despite its size, the bill is lightweight, made of keratin with a honeycomb bone structure inside. It is used to reach fruit, regulate body temperature, and deter predators.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6933\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6944\",\n        \"text\": \"Toucans have zygodactyl feet — two toes pointing forward and two backward — giving them a strong grip on branches. Their sharp claws allow them to perch securely in the forest canopy and move nimbly between trees.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6944\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6953\",\n        \"text\": \"Toucans are native to the Neotropical region, ranging from southern Mexico through Central America to northern Argentina and Bolivia. They inhabit tropical and subtropical forests at elevations up to 1,800 m. Some species are endangered due to habitat loss and the illegal pet trade.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6953\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6967\",\n        \"text\": \"Toucans are primarily frugivores, feeding on a wide variety of tropical fruits such as figs, berries, and palm fruits. They also supplement their diet with insects, small lizards, eggs, and nestlings of other birds, making them opportunistic omnivores.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6967\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6972\",\n        \"text\": \"Toucans nest in tree cavities, often using holes made by woodpeckers. Both parents share incubation duties for 15–18 days.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6972\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6971\",\n        \"text\": \"NESTING\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6976\",\n        \"text\": \"Toucans are social birds that live in small flocks of 6–20 individuals. They communicate using loud, frog-like croaking calls that echo through the forest.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6976\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6975\",\n        \"text\": \"BEHAVIOR\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6980\",\n        \"text\": \"Toucans play a vital ecological role as seed dispersers. They swallow fruit whole and excrete seeds far from the parent tree, helping regenerate tropical forests.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6980\"\n      }\n    },\n    {\n      \"command\": \"set_fill_color\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6980\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6979\",\n        \"text\": \"ECOLOGY\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6979\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6983\",\n        \"text\": \"• A toucan's bill can be up to 20 cm long — nearly half its total body length of ~55 cm.\\n\\n• Toucans sleep by tucking their bill under their wing and folding their tail over their back to conserve space.\\n\\n• The Toco Toucan (Ramphastos toco) is the largest toucan species, weighing up to 680 grams.\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6983\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6987\",\n        \"text\": \"SOURCES: National Geographic (nationalgeographic.com/animals/birds/facts/toucan) | Cornell Lab of Ornithology — Birds of the World (birdsoftheworld.org) | IUCN Red List (iucnredlist.org) | Smithsonian's National Zoo (nationalzoo.si.edu)\"\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6987\"\n      }\n    },\n    {\n      \"command\": \"resize_node\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:6987\",\n        \"width\": 1800,\n        \"height\": 12\n      }\n    }\n  ],\n  \"total\": 30,\n  \"succeeded\": 30\n}"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "results": [
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "46:6900",
+                "text": "Toucans are vibrant tropical birds found in the rainforests of Central and South America. Known for their oversized, colorful bills, they belong to the family Ramphastidae and are closely related to woodpeckers. There are over 40 species of toucans in the world."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:6900"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "46:6916",
+                "text": "Toucans have small, round eyes surrounded by bright patches of bare skin. Their keen eyesight helps them spot ripe fruit in dense forest canopies. The eye ring can be blue, green, or red depending on the species."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:6916"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "46:6924",
+                "text": "Toucan feathers are predominantly black with splashes of white, yellow, red, and orange. The colorful plumage serves as camouflage in the dappled light of the rainforest and plays a role in attracting mates during breeding season."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:6924"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "46:6933",
+                "text": "The toucan's bill can be up to half the length of its body — up to 20 cm long. Despite its size, the bill is lightweight, made of keratin with a honeycomb bone structure inside. It is used to reach fruit, regulate body temperature, and deter predators."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:6933"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "46:6944",
+                "text": "Toucans have zygodactyl feet — two toes pointing forward and two backward — giving them a strong grip on branches. Their sharp claws allow them to perch securely in the forest canopy and move nimbly between trees."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:6944"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "46:6953",
+                "text": "Toucans are native to the Neotropical region, ranging from southern Mexico through Central America to northern Argentina and Bolivia. They inhabit tropical and subtropical forests at elevations up to 1,800 m. Some species are endangered due to habitat loss and the illegal pet trade."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:6953"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "46:6967",
+                "text": "Toucans are primarily frugivores, feeding on a wide variety of tropical fruits such as figs, berries, and palm fruits. They also supplement their diet with insects, small lizards, eggs, and nestlings of other birds, making them opportunistic omnivores."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:6967"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "46:6972",
+                "text": "Toucans nest in tree cavities, often using holes made by woodpeckers. Both parents share incubation duties for 15–18 days."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:6972"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "46:6971",
+                "text": "NESTING"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "46:6976",
+                "text": "Toucans are social birds that live in small flocks of 6–20 individuals. They communicate using loud, frog-like croaking calls that echo through the forest."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:6976"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "46:6975",
+                "text": "BEHAVIOR"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "46:6980",
+                "text": "Toucans play a vital ecological role as seed dispersers. They swallow fruit whole and excrete seeds far from the parent tree, helping regenerate tropical forests."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:6980"
+              }
+            },
+            {
+              "command": "set_fill_color",
+              "success": true,
+              "result": {
+                "id": "46:6980"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "46:6979",
+                "text": "ECOLOGY"
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:6979"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "46:6983",
+                "text": "• A toucan's bill can be up to 20 cm long — nearly half its total body length of ~55 cm.\n\n• Toucans sleep by tucking their bill under their wing and folding their tail over their back to conserve space.\n\n• The Toco Toucan (Ramphastos toco) is the largest toucan species, weighing up to 680 grams."
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:6983"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "46:6987",
+                "text": "SOURCES: National Geographic (nationalgeographic.com/animals/birds/facts/toucan) | Cornell Lab of Ornithology — Birds of the World (birdsoftheworld.org) | IUCN Red List (iucnredlist.org) | Smithsonian's National Zoo (nationalzoo.si.edu)"
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:6987"
+              }
+            },
+            {
+              "command": "resize_node",
+              "success": true,
+              "result": {
+                "id": "46:6987",
+                "width": 1800,
+                "height": 12
+              }
+            }
+          ],
+          "total": 30,
+          "succeeded": 30
+        }
+      }
+    ]
+  },
+  {
+    "id": "msg_018VaZKNjxEtgxp9iXL45c2L",
+    "timestamp": 1780667246470,
+    "type": "agent_request",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "All 30 operations succeeded. Here's a summary of every change made to the toucan research poster:\n\n---\n\n### ✅ Content Updates (Lorem Ipsum → Factual Info)\n\n| Section | New Content |\n|---|---|\n| **Intro Text** | Toucans' taxonomy (family Ramphastidae), rainforest habitat, 40+ species |\n| **The Eyes** | Small round eyes with colorful bare-skin rings; keen eyesight for spotting fruit |\n| **The Feathers** | Predominantly black with colorful splashes; camouflage & mate attraction |\n| **The Beak** | Up to 20 cm long, lightweight keratin honeycomb structure; thermoregulation |\n| **The Claws** | Zygodactyl feet (2 toes forward, 2 back); strong grip for canopy life |\n| **Population** | Neotropical range (Mexico to Argentina); endangered by habitat loss & pet trade |\n| **Toucan Diet** | Frugivores (figs, berries, palm fruits) + opportunistic insects, lizards, eggs |\n| **Point 01 — NESTING** | Tree cavity nesting; 15–18 day shared incubation |\n| **Point 02 — BEHAVIOR** | Social flocks of 6–20; loud frog-like croaking calls |\n| **Point 03 — ECOLOGY** | Vital seed dispersers; help regenerate tropical forests |\n| **Fun Facts** | Bill length (~20 cm), sleeping posture, Toco Toucan size (680 g) |\n\n### 📚 Sources Updated\nFour real, citable sources: National Geographic, Cornell Lab of Ornithology, IUCN Red List, and Smithsonian's National Zoo — spanning the full width of the slide."
+      }
+    ],
+    "calls": []
+  }
+]

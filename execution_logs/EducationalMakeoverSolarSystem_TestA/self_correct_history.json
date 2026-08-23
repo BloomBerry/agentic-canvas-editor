@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 77: Educational Solar System Makeover",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 4.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.584,
+    "input_tokens": 1466,
+    "output_tokens": 105,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000754,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 859,
+        "output_tokens": 58,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.2774195671081543
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 607,
+        "output_tokens": 47,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.3067688941955566
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.383317,
+    "if_judge_cost": 0.016302,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000754,
+    "total_cost": 0.400373
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 4.0,
+      "IF_reason": "The agent added a 'Planetary Sizes' slide with an appropriate image, converted the Inner Planets content into four bullet points, removed paragraph text from Overview/Outer Planets/Conclusion, and applied a consistent blue/white Arial-title style, but Overview and Conclusion still retain images despite the instruction to leave only titles on those slides.",
+      "prompt": "Overhaul this presentation on the solar system to follow modern educational design principles. Summarize the content on the 'Inner Planets' slide into four key bullet points. For the other content-heavy slides (Overview, Outer Planets, Conclusion), remove the detailed paragraphs, leaving only the titles on the slides. Create a new slide titled 'Planetary Sizes' using an appropriate image. Unify the entire presentation with a clean, professional look using an Arial font for titles and a consistent blue and white color scheme.",
+      "inference_sec": 79.9546570777893,
+      "judge_sec": 16.09136700630188,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 30969,
+          "output_tokens": 3816,
+          "cache_read_input_tokens": 426022,
+          "cache_creation_5m": 28097,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.383317,
+          "n_responses": 10,
+          "elapsed_sec": 79.955
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 16.091,
+          "input_tokens": 8218,
+          "output_tokens": 603,
+          "reasoning_tokens": 516,
+          "cost_usd": 0.016302,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

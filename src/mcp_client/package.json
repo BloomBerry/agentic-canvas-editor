@@ -1,0 +1,29 @@
+{
+  "name": "figma-slide-mcp-client",
+  "version": "1.0.0",
+  "main": "dist/app.js",
+  "scripts": {
+    "start": "node dist/app.js",
+    "dev": "nodemon --exec ts-node --transpile-only src/app.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@anthropic-ai/bedrock-sdk": "^0.22.1",
+    "@anthropic-ai/sdk": "^0.54.0",
+    "@google/genai": "^2.6.0",
+    "@modelcontextprotocol/sdk": "^1.12.2",
+    "@napi-rs/canvas": "^0.1.73",
+    "dotenv": "^16.4.5",
+    "express": "^5.1.0",
+    "multer": "^1.4.5-lts.1",
+    "openai": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^24.0.1",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}

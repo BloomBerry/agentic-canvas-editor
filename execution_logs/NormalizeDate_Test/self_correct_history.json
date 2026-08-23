@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 50: Normalize Date Format",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 3.708,
+    "input_tokens": 1524,
+    "output_tokens": 68,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000718,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 888,
+        "output_tokens": 35,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.7399990558624268
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 636,
+        "output_tokens": 33,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.9681041240692139
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.389875,
+    "if_judge_cost": 0.036015,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000718,
+    "total_cost": 0.42660800000000004
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent correctly converted all nonstandard full-date strings shown in the deck (e.g., 1858/08/31, 9/2, 1945, 1954, May 7, 04/30/1975, 1976/04/25, and 12/31, 2015) into the requested 'Month Day, Year' format without making unrelated edits.",
+      "prompt": "Go through the presentation and standardize all the date formats to 'Month Day, Year', for example 'March 22, 2022'. Make sure to handle different formats like '28 March 2022', '02/26/2022', and '18 of March 2022'.",
+      "inference_sec": 92.12393403053284,
+      "judge_sec": 17.338212251663208,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 3333,
+          "output_tokens": 1935,
+          "cache_read_input_tokens": 86630,
+          "cache_creation_5m": 86630,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.389875,
+          "n_responses": 2,
+          "elapsed_sec": 92.124
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 17.338,
+          "input_tokens": 22292,
+          "output_tokens": 815,
+          "reasoning_tokens": 705,
+          "cost_usd": 0.036015,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

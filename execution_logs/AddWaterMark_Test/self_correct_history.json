@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 57: Add Water Mark",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.519,
+    "input_tokens": 1424,
+    "output_tokens": 67,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000677,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 838,
+        "output_tokens": 34,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.21547532081604
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 586,
+        "output_tokens": 33,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.3031258583068848
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.410997,
+    "if_judge_cost": 0.035571,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000677,
+    "total_cost": 0.447245
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent added a text element reading \u201cDRAFT\u201d named as a watermark to every slide 1\u201325, with no unrelated edits shown.",
+      "prompt": "Add a 'DRAFT' watermark to every slide in the presentation.",
+      "inference_sec": 105.86668276786804,
+      "judge_sec": 13.428860902786255,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 19010,
+          "output_tokens": 6038,
+          "cache_read_input_tokens": 185027,
+          "cache_creation_5m": 55437,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.410997,
+          "n_responses": 3,
+          "elapsed_sec": 105.867
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 13.429,
+          "input_tokens": 24553,
+          "output_tokens": 488,
+          "reasoning_tokens": 439,
+          "cost_usd": 0.035571,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

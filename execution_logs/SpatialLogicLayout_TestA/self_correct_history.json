@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 63: Spatial Constraint Layout",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 4.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.4,
+    "input_tokens": 1320,
+    "output_tokens": 78,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000653,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 786,
+        "output_tokens": 41,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.940436840057373
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 534,
+        "output_tokens": 37,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.4592618942260742
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.073712,
+    "if_judge_cost": 0.027482,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000653,
+    "total_cost": 0.10184700000000001
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 4.0,
+      "IF_reason": "The tables are arranged to satisfy the main constraints\u2014C is left of B, A is closest to the Entrance, all table bottoms share a baseline, and the tables do not overlap\u2014but the final slide has minor visual issues, including duplicated/overlapping \u201cTable C\u201d text and Table A partially covering the Entrance label.",
+      "prompt": "Please arrange the three tables (A, B, and C) on the slide according to the list of constraints. Make sure to follow all the rules.",
+      "inference_sec": 29.008316040039062,
+      "judge_sec": 51.263105154037476,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 2239,
+          "output_tokens": 1326,
+          "cache_read_input_tokens": 65118,
+          "cache_creation_5m": 7352,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.073712,
+          "n_responses": 2,
+          "elapsed_sec": 29.008
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 51.263,
+          "input_tokens": 5034,
+          "output_tokens": 2119,
+          "reasoning_tokens": 2035,
+          "cost_usd": 0.027482,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

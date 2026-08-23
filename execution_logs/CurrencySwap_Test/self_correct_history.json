@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 51: Currency Symbol Swap (EUR\u2192USD)",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 3.219,
+    "input_tokens": 1366,
+    "output_tokens": 88,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000687,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 809,
+        "output_tokens": 50,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.3003818988800049
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 557,
+        "output_tokens": 38,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.9183340072631836
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.056415,
+    "if_judge_cost": 0.014986,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000687,
+    "total_cost": 0.07208799999999999
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent correctly updated slide 11\u2019s monetary value from European formatting to US formatting by changing \u201c1.000\u201d to \u201c1,000,\u201d replacing \u201c\u20ac\u201d with \u201c$,\u201d and updating the related label to \u201cROI per invested $,\u201d with no unrelated edits.",
+      "prompt": "On slide 11, convert monetary value from Euros to US Dollars. This includes changing the currency symbol, and the thousands separator.",
+      "inference_sec": 17.981919050216675,
+      "judge_sec": 7.825747966766357,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 698,
+          "output_tokens": 440,
+          "cache_read_input_tokens": 65270,
+          "cache_creation_5m": 7504,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.056415,
+          "n_responses": 2,
+          "elapsed_sec": 17.982
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 7.826,
+          "input_tokens": 10109,
+          "output_tokens": 235,
+          "reasoning_tokens": 162,
+          "cost_usd": 0.014986,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

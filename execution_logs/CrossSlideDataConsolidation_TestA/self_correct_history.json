@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 74: Cross-Slide Data Consolidation",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.868,
+    "input_tokens": 1338,
+    "output_tokens": 103,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.0007,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 543,
+        "output_tokens": 34,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.135633945465088
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 795,
+        "output_tokens": 69,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.7320890426635742
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.170028,
+    "if_judge_cost": 0.013089,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.0007,
+    "total_cost": 0.183817
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent correctly combined slide 2 and 3 data into a slide 2 comparison table with appropriate dashes, deleted original slides 3\u20134, converted remaining titles to Title Case, and aligned/resized the images and captions on the final slide without unrelated edits.",
+      "prompt": "Consolidate data from slides 2-3 into a table on slide 2. Delete slides 3-4. Format titles to Title Case. Align/resize images on last slide.",
+      "inference_sec": 53.39329695701599,
+      "judge_sec": 14.59122896194458,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 4703,
+          "output_tokens": 2209,
+          "cache_read_input_tokens": 259816,
+          "cache_creation_5m": 11957,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.170028,
+          "n_responses": 7,
+          "elapsed_sec": 53.393
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 14.591,
+          "input_tokens": 5751,
+          "output_tokens": 590,
+          "reasoning_tokens": 516,
+          "cost_usd": 0.013089,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

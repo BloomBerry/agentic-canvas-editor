@@ -1,0 +1,27 @@
+# Python >= 3.12 required
+# Install with: pip install -r requirements.txt
+
+# Core async / HTTP
+aiohttp==3.11.10
+httpx==0.28.1
+requests==2.32.3
+
+# LLM SDKs
+anthropic>=0.54.0           # Claude (ANTHROPIC_API_KEY)
+openai>=1.77.0              # GPT   (OPENAI_API_KEY)
+google-genai>=1.14.0        # Gemini, new SDK (GOOGLE_APPLICATION_CREDENTIALS)
+google-generativeai>=0.8.0  # Gemini, used by the IF judge in evaluate_figma_results.py
+google-cloud-aiplatform>=1.92.0
+
+# Image handling + token counting
+Pillow>=10.0.0
+numpy>=1.26.0               # IF / visual-quality judge (evaluate_figma_results.py)
+tiktoken>=0.9.0             # token accounting in the self-correction loop
+
+# Configuration & utilities
+python-dotenv>=1.1.0
+pyyaml>=6.0.2
+pydantic>=2.10.3
+
+# (Optional) AWS Bedrock support
+# boto3>=1.38.11

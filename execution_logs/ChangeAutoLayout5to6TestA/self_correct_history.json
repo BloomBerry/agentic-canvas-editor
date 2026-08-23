@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 105: ChangeAutoLayout5to6",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.371,
+    "input_tokens": 1392,
+    "output_tokens": 85,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000693,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 570,
+        "output_tokens": 33,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.1359870433807373
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 822,
+        "output_tokens": 52,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.2349350452423096
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.164488,
+    "if_judge_cost": 0.029621,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000693,
+    "total_cost": 0.194802
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent added a sixth populated feature-list child on slide 4 inside the existing 'Feature list' structure, with title/body content and matching icon/text components, with no unrelated edits.",
+      "prompt": "Please increase autolayout children from 5 to 6 in slide 4, and fill in the contents. Make sure to align and arrange using auto layout",
+      "inference_sec": 76.74502396583557,
+      "judge_sec": 14.281561851501465,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 9422,
+          "output_tokens": 1346,
+          "cache_read_input_tokens": 224636,
+          "cache_creation_5m": 12971,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.164488,
+          "n_responses": 6,
+          "elapsed_sec": 76.745
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 14.282,
+          "input_tokens": 19065,
+          "output_tokens": 579,
+          "reasoning_tokens": 516,
+          "cost_usd": 0.029621,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

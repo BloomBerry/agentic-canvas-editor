@@ -1,0 +1,83 @@
+{
+  "case_name": "Case 97: LaTeX to Office Math (OMML)",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 2,
+  "final_IF": 3.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.275,
+    "input_tokens": 1350,
+    "output_tokens": 88,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000681,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 549,
+        "output_tokens": 38,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.9771168231964111
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 801,
+        "output_tokens": 50,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.2978510856628418
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.254219,
+    "if_judge_cost": 0.010962,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000681,
+    "total_cost": 0.265862
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 3.0,
+      "IF_reason": "The agent converted the main LaTeX-style equation strings on slides 2 and 3 into visually formatted math-like frames, but they appear as vector frames rather than clearly editable math objects, and inline equations such as \u201cn = 2\u201d, \u201cn = 3\u201d, and \u201cn = 4\u201d were left as plain text.",
+      "prompt": "On slides 2 and 3, convert all text representations of mathematical equations, like 'x^{n} + y^{n} = z^{n}' and '\\\\frac{1}{2}', into properly formatted, editable math objects.",
+      "inference_sec": 58.9449520111084,
+      "judge_sec": 14.099572896957397,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 9848,
+          "output_tokens": 2787,
+          "cache_read_input_tokens": 488253,
+          "cache_creation_5m": 9705,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.254219,
+          "n_responses": 14,
+          "elapsed_sec": 58.945
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 14.1,
+          "input_tokens": 3938,
+          "output_tokens": 604,
+          "reasoning_tokens": 516,
+          "cost_usd": 0.010962,
+          "calls": 1
+        },
+        "distill": {}
+      },
+      "feedback_used_in_next_iter": "The following is a judge's critique of your previous attempt at this slide-editing task. Address each issue raised:\n\nThe agent converted the main LaTeX-style equation strings on slides 2 and 3 into visually formatted math-like frames, but they appear as vector frames rather than clearly editable math objects, and inline equations such as \u201cn = 2\u201d, \u201cn = 3\u201d, and \u201cn = 4\u201d were left as plain text.",
+      "actions_history_used_in_next_iter": "- (iter 1) focus_slide({\"slideId\": \"1:40\"})\n- (iter 1) batch_execute(set_text_content\u00d71)\n- (iter 1) create_math({\"latex\": \"x^{n} + y^{n} = z^{n}, \\\\quad n > 2\", \"x\": 339, \"y\": 620, \"scale\": 1.)\n- (iter 1) get_node_info({\"nodeId\": \"2:16229\", \"depth\": 1})\n- (iter 1) batch_execute(resize_node\u00d71, move_node\u00d71, create_text\u00d71)\n- (iter 1) batch_execute(set_text_font\u00d71, set_text_properties\u00d71)\n- (iter 1) focus_slide({\"slideId\": \"1:44\"})\n- (iter 1) batch_execute(set_text_content\u00d71)\n- (iter 1) create_math({\"latex\": \"a^{2} + b^{2} = c^{2}\", \"x\": 184, \"y\": 530, \"scale\": 1.5, \"name\": \"Eq)\n- (iter 1) create_math({\"latex\": \"3^{2} + 4^{2} = 5^{2}\", \"x\": 184, \"y\": 640, \"scale\": 1.5, \"name\": \"Eq)\n- (iter 1) create_math({\"latex\": \"\\\\frac{1}{2}\", \"x\": 184, \"y\": 750, \"scale\": 1.5, \"name\": \"Equation: o)\n- (iter 1) create_math({\"latex\": \"\\\\alpha^{2}\", \"x\": 184, \"y\": 860, \"scale\": 1.5, \"name\": \"Equation: al)\n- (iter 1) batch_execute(resize_node\u00d74, move_node\u00d74)"
+    },
+    {
+      "iter": 2,
+      "error": "inference_failed",
+      "inference_sec": 145.1280550956726
+    }
+  ]
+}

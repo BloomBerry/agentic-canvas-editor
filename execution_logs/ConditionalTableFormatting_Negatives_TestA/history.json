@@ -1,0 +1,288 @@
+[
+  {
+    "id": "e76d6110-c7e9-4cf1-9373-fc776d988489",
+    "timestamp": 1780666578809,
+    "type": "user_request",
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "\n**Context**\nYou are a presentation-design agent with access to Figma Slides via tool calls.\nFollow the **Instruction** to modify the presentation.\nRefer to the **Tool Use Principles** and **Figma Slides Basics** for guidance.\n\n**Tool Use Principles**\n\nYour task is to produce an array of tool (function) calls necessary to modify the presentation in one turn.\nInclude every necessary tool (function) calls and do not output any text other than the function calls themselves.\n\n1. Plan first\nBriefly outline the key steps you will take.\n2. Be exhaustive\nConsider all parameters, options, ordering, and dependencies necessary to make the modification in one turn.\n3. Preserve existing content\nDo NOT delete or recreate elements that should remain unchanged. Only modify what the instruction asks for.\n\n4. Use batch_execute aggressively — it supports ALL commands\nbatch_execute works with EVERY tool command: creation (create_frame, create_text, create_math, create_rectangle, etc.), modification (set_text_font, set_fill_color, move_node, resize_node, etc.), and layout (set_layout_mode, set_padding, set_item_spacing, etc.).\nALWAYS prefer ONE batch_execute call over multiple individual tool calls. Each individual tool call costs a full API round-trip.\nCRITICAL: If you need to create or modify 3+ elements, ALWAYS use batch_execute — never call create_* or set_* individually in separate tool calls.\nExample — creating multiple elements + setting properties in one call:\n  batch_execute({ operations: [\n    { command: \"create_frame\", params: { x: 0, y: 0, width: 400, height: 40, name: \"Row 1\", parentId: \"1:10\" } },\n    { command: \"create_text\", params: { x: 10, y: 5, width: 380, text: \"Hello\", fontSize: 16, parentId: \"1:10\" } },\n    { command: \"set_text_font\", params: { nodeId: \"1:23\", fontFamily: \"Inter\", fontStyle: \"Bold\" } },\n    { command: \"set_fill_color\", params: { nodeId: \"1:67\", color: \"#FF0000\" } }\n  ] })\n\n5. Text layout quality\n- ALWAYS set an explicit **width** on text nodes to prevent text overflow and overlap with adjacent elements.\n- Predict the bounding box of every element BEFORE placing it. For text nodes, rendered height ≈ ceil(text_length_px / width) × fontSize × 1.3 (line-height). Use the predicted bounding box (x, y, width, rendered_height) to ensure NO overlap with any neighboring element in all directions — check that bounding boxes do not intersect horizontally or vertically.\n- For multi-column layouts, calculate column width = (available width) / num_columns.\n6. Avoid redundant discovery\n- NEVER call check_connection_status — the connection is already established.\n- NEVER call export_json or get_page_structure — the document structure is already provided or can be obtained more efficiently.\n- Do NOT call get_all_slides if slide IDs are already provided in the context.\n- Only use get_node_info or get_node_info_by_types when you need specific node details not already visible in the provided JSON.\n- After completing modifications, do NOT make extra verification calls (get_node_info, export_slide_image) — the tool results already confirm success or failure.\n\n7. Minimize API round-trips\n- Collect ALL changes across ALL slides into a SINGLE batch_execute call when possible, rather than processing slides one-by-one.\n- Do NOT alternate focus_slide → batch_execute per slide. Instead, gather every modification and execute in one batch.\n- focus_slide is only needed before creating new nodes. For existing node modifications, batch_execute with nodeId works directly regardless of which slide is focused.\n\n8. Handle node ID staleness\n- After deleting a slide or node, ALL child node IDs within it become invalid immediately.\n- If you need to reference other nodes after a delete, call get_all_slides or get_slide_grid first to refresh the list before proceeding.\n- NEVER batch a delete_slide together with operations that reference nodes on other slides in the same batch_execute — the delete may invalidate IDs mid-batch. Instead, split into: (1) batch for modifications, (2) separate batch for deletions.\n- NEVER batch a create_slide together with its child element operations (create_text, create_rectangle, etc.) in the same batch_execute — the new slide's ID is unknown until create_slide returns, so child elements cannot specify the correct parentId.\n- CRITICAL — create_slide is NEVER the final step. After creating slides, you MUST ALWAYS follow up with batch_execute to populate them with content (backgrounds, text, shapes, etc.). A blank slide is never acceptable.\n- CRITICAL — parentId after create_slide: When adding elements to a newly created slide, you MUST include parentId (the new slide's ID) in every create_* params. Without parentId, elements are placed on the previously focused slide, NOT on the new one. Required workflow:\n  Step 1: create_slide({ column: 3, name: \"Divider\" })  → returns { id: \"11:100\" }\n  Step 2 (MANDATORY): batch_execute({ operations: [\n    { command: \"create_rectangle\", params: { x: 0, y: 0, width: 1920, height: 1080, fillColor: { r: 0, g: 0.2, b: 0.063 }, parentId: \"11:100\" } },\n    { command: \"create_text\", params: { x: 100, y: 200, text: \"Thank You\", fontSize: 71, fontColor: { r: 0.78, g: 0.94, b: 0.31 }, parentId: \"11:100\" } }\n  ] })\n  NEVER stop after Step 1 — Step 2 is required to make the slide functional.\n- NEVER batch a create_slide together with reorder_slides in the same batch_execute — the new slide's ID is unknown until create_slide returns, so it cannot be included in the slideIds array. Instead: (1) create all new slides first, (2) then call reorder_slides with the complete list of slide IDs (existing + newly created) in the desired presentation order.\n9. Deliver\nBased on the plan, respond with the exact sequence of tool (function) calls it should run.\n\n\n**Figma Slides Basics**\n\n1. Figma Slides Basics\n- You are working with Figma Slides, a presentation tool built into Figma.\n- Each slide is a top-level container (similar to a frame) that holds content elements.\n- Slides are arranged in a grid layout. Each slide has a unique ID.\n- When creating or modifying content, the parentId should be a slide ID.\n\n2. Node Hierarchy\n- All content nodes live within slides. Slides are the top-level containers.\n- Parent-child links create the hierarchy within each slide.\n- Coordinates in `relativeTransform` and `move_node` are relative to the **parent node**, not the slide root. To position a child within a frame, use coordinates relative to that frame's origin (0, 0 = top-left of the parent frame).\n\n3. Content Elements\n- Slides can contain: text nodes, rectangles, ellipses, frames, groups, graphics (SVG), charts, tables.\n- Text nodes have font family, style, size, color, and alignment properties.\n- Shapes have fill color, stroke, corner radius, and opacity properties.\n\n4. Slide Management\n- focus_slide navigates the viewport to a slide. It is ONLY required before creating new nodes (create_text, create_rectangle, etc.) on that slide.\n- For modifying existing nodes (set_text_font, set_fill_color, move_node, resize_node, etc.), use batch_execute with nodeId directly — no focus_slide needed.\n- Each slide can have transitions and skip settings.\n\n5. Slide Ordering\n- Presentation order is determined by the internal children array, NOT by x/y coordinates. move_node does NOT change slide order.\n- To reorder slides, use reorder_slides with the full list of slide IDs in the desired order.\n- Example: reorder_slides({ slideIds: [\"id_intro\", \"id_about\", \"id_work\", \"id_contact\"] })\n\n6. Deck theme consistency (new slides and new blocks only)\n- When adding a new slide or major new content block, match the deck's existing styling. Do NOT default to white background + black text unless a comparable existing slide uses exactly that pattern.\n- Before populating a new slide: inspect 1–2 comparable slides (cover, section divider, Q&A/closing, table-of-contents, or adjacent content slides) for background fill, title fontFamily/fontSize/fontStyle, title color, and recurring decorative elements.\n- Copy those exact values via fillColor/fontColor on create_rectangle/create_text, or set_fill_color/set_text_font after creation.\n- For chart/theme recolor tasks: use replace_color with the exact source and target hex from the instruction; recolor only chart/data series elements, not unrelated branding or body text.\n- Do NOT restyle existing slides or nodes unless the instruction explicitly asks for it.\n\n\n\n**Context Mode: Macro-Programmatic (Batch Operations)**\nYou are performing a batch operation across the entire presentation.\n- Below is a SKELETON view of the document showing only text content and node IDs.\n- Most rendering details (colors, fills, strokes) have been stripped for efficiency.\n- **Target slides** (the ones referenced in the instruction) include a `bounds` field on each node: `[x, y, width, height]` in absolute coordinates. Use these to reason about spatial layout (e.g. which text is below a chart, which elements overlap, etc.).\n- Plan your changes by identifying ALL matching nodes from the skeleton.\n- Generate tool calls for EVERY node that needs modification – do not skip any.\n- The full document has been imported into Figma – you can reference any node by its ID via batch_execute.\n\n\n**Document Skeleton (Text & Structure Only)**\nThe presentation has 4 slide(s).\n```json\n{\"fileName\": \"\", \"document\": {\"id\": \"0:0\", \"name\": \"Document\", \"type\": \"DOCUMENT\", \"children\": [{\"id\": \"0:1\", \"name\": \"Page 1\", \"type\": \"CANVAS\", \"children\": [{\"id\": \"1:162\", \"name\": \"Section 1\", \"type\": \"SECTION\", \"children\": [{\"id\": \"1:37\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:38\", \"name\": \"Frame 2\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:39\", \"name\": \"H1\", \"type\": \"TEXT\", \"characters\": \"Conditional Table Formatting (Negative Numbers) - Original\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 96.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:40\", \"name\": \"H1\", \"type\": \"TEXT\", \"characters\": \"Multiple tables with mixed values; no formatting applied.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:41\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:42\", \"name\": \"Region Table\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:43\", \"name\": \"Header Row\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:44\", \"name\": \"Header-0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:45\", \"name\": \"Region\", \"type\": \"TEXT\", \"characters\": \"Region\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 20.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:46\", \"name\": \"Header-1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:47\", \"name\": \"Revenue\", \"type\": \"TEXT\", \"characters\": \"Revenue\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 20.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:48\", \"name\": \"Header-2\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:49\", \"name\": \"Cost\", \"type\": \"TEXT\", \"characters\": \"Cost\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 20.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:50\", \"name\": \"Header-3\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:51\", \"name\": \"Profit\", \"type\": \"TEXT\", \"characters\": \"Profit\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 20.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:52\", \"name\": \"Row 0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:53\", \"name\": \"Cell-0-0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:54\", \"name\": \"North\", \"type\": \"TEXT\", \"characters\": \"\\nNorth\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:55\", \"name\": \"Cell-0-1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:56\", \"name\": \"$120,500\", \"type\": \"TEXT\", \"characters\": \"\\n$120,500\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:57\", \"name\": \"Cell-0-2\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:58\", \"name\": \"$98,300\", \"type\": \"TEXT\", \"characters\": \"\\n$98,300\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:59\", \"name\": \"Cell-0-3\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:60\", \"name\": \"$22,200\", \"type\": \"TEXT\", \"characters\": \"\\n$22,200\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:61\", \"name\": \"Row 1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:62\", \"name\": \"Cell-1-0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:63\", \"name\": \"South\", \"type\": \"TEXT\", \"characters\": \"\\nSouth\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:64\", \"name\": \"Cell-1-1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:65\", \"name\": \"$88,000\", \"type\": \"TEXT\", \"characters\": \"\\n$88,000\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:66\", \"name\": \"Cell-1-2\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:67\", \"name\": \"$103,250\", \"type\": \"TEXT\", \"characters\": \"\\n$103,250\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:68\", \"name\": \"Cell-1-3\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:69\", \"name\": \"-$15,250\", \"type\": \"TEXT\", \"characters\": \"\\n-$15,250\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:70\", \"name\": \"Row 2\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:71\", \"name\": \"Cell-2-0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:72\", \"name\": \"East\", \"type\": \"TEXT\", \"characters\": \"\\nEast\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:73\", \"name\": \"Cell-2-1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:74\", \"name\": \"$74,300\", \"type\": \"TEXT\", \"characters\": \"\\n$74,300\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:75\", \"name\": \"Cell-2-2\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:76\", \"name\": \"$69,900\", \"type\": \"TEXT\", \"characters\": \"\\n$69,900\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:77\", \"name\": \"Cell-2-3\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:78\", \"name\": \"$4,400\", \"type\": \"TEXT\", \"characters\": \"\\n$4,400\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:79\", \"name\": \"Row 3\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:80\", \"name\": \"Cell-3-0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:81\", \"name\": \"West\", \"type\": \"TEXT\", \"characters\": \"\\nWest\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:82\", \"name\": \"Cell-3-1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:83\", \"name\": \"$63,000\", \"type\": \"TEXT\", \"characters\": \"\\n$63,000\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:84\", \"name\": \"Cell-3-2\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:85\", \"name\": \"$78,500\", \"type\": \"TEXT\", \"characters\": \"\\n$78,500\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:86\", \"name\": \"Cell-3-3\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:87\", \"name\": \"-$15,500\", \"type\": \"TEXT\", \"characters\": \"\\n-$15,500\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}]}]}, {\"id\": \"1:88\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:89\", \"name\": \"KPI Table\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:90\", \"name\": \"Header Row\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:91\", \"name\": \"Header-0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:92\", \"name\": \"KPI\", \"type\": \"TEXT\", \"characters\": \"KPI\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:93\", \"name\": \"Header-1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:94\", \"name\": \"Q1\", \"type\": \"TEXT\", \"characters\": \"Q1\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:95\", \"name\": \"Header-2\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:96\", \"name\": \"Q2\", \"type\": \"TEXT\", \"characters\": \"Q2\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:97\", \"name\": \"Header-3\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:98\", \"name\": \"Q3\", \"type\": \"TEXT\", \"characters\": \"Q3\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:99\", \"name\": \"Header-4\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:100\", \"name\": \"Q4\", \"type\": \"TEXT\", \"characters\": \"Q4\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:101\", \"name\": \"Row 0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:102\", \"name\": \"Cell-0-0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:103\", \"name\": \"Conversion Rate\", \"type\": \"TEXT\", \"characters\": \"Conversion Rate\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 16.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:104\", \"name\": \"Cell-0-1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:105\", \"name\": \"3.2%\", \"type\": \"TEXT\", \"characters\": \"3.2%\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 16.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:106\", \"name\": \"Cell-0-2\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:107\", \"name\": \"3.0%\", \"type\": \"TEXT\", \"characters\": \"3.0%\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 16.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:108\", \"name\": \"Cell-0-3\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:109\", \"name\": \"2.8%\", \"type\": \"TEXT\", \"characters\": \"2.8%\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 16.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:110\", \"name\": \"Cell-0-4\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:111\", \"name\": \"2.9%\", \"type\": \"TEXT\", \"characters\": \"2.9%\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 16.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:112\", \"name\": \"Row 1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:113\", \"name\": \"Cell-1-0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:114\", \"name\": \"Churn\", \"type\": \"TEXT\", \"characters\": \"Churn\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 16.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:115\", \"name\": \"Cell-1-1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:116\", \"name\": \"4.5%\", \"type\": \"TEXT\", \"characters\": \"4.5%\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 16.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:117\", \"name\": \"Cell-1-2\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:118\", \"name\": \"5.1%\", \"type\": \"TEXT\", \"characters\": \"5.1%\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 16.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:119\", \"name\": \"Cell-1-3\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:120\", \"name\": \"\\u20135.6%\", \"type\": \"TEXT\", \"characters\": \"\\u20135.6%\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 16.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:121\", \"name\": \"Cell-1-4\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:122\", \"name\": \"4.9%\", \"type\": \"TEXT\", \"characters\": \"4.9%\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 16.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:123\", \"name\": \"Row 2\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:124\", \"name\": \"Cell-2-0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:125\", \"name\": \"YoY Growth\", \"type\": \"TEXT\", \"characters\": \"YoY Growth\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 16.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:126\", \"name\": \"Cell-2-1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:127\", \"name\": \"12.4%\", \"type\": \"TEXT\", \"characters\": \"12.4%\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 16.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:128\", \"name\": \"Cell-2-2\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:129\", \"name\": \"9.8%\", \"type\": \"TEXT\", \"characters\": \"9.8%\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 16.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:130\", \"name\": \"Cell-2-3\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:131\", \"name\": \"-1.2%\", \"type\": \"TEXT\", \"characters\": \"-1.2%\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 16.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:132\", \"name\": \"Cell-2-4\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:133\", \"name\": \"8.3%\", \"type\": \"TEXT\", \"characters\": \"8.3%\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 16.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}]}]}, {\"id\": \"1:134\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:135\", \"name\": \"Metric Table\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:136\", \"name\": \"Header Row\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:137\", \"name\": \"Header-0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:138\", \"name\": \"Metric\", \"type\": \"TEXT\", \"characters\": \"Metric\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 20.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:139\", \"name\": \"Header-1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:140\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Note\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Bold\", \"fontWeight\": 700, \"fontSize\": 20.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:141\", \"name\": \"Row 0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:142\", \"name\": \"Cell-0-0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:143\", \"name\": \"Units\", \"type\": \"TEXT\", \"characters\": \"\\nUnits\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:144\", \"name\": \"Cell-0-1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:145\", \"name\": \"Change: -12 units vs plan\", \"type\": \"TEXT\", \"characters\": \"\\nChange: -12 units vs plan\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:146\", \"name\": \"Row 1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:147\", \"name\": \"Cell-1-0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:148\", \"name\": \"Tickets\", \"type\": \"TEXT\", \"characters\": \"\\nTickets\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:149\", \"name\": \"Cell-1-1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:150\", \"name\": \"\\u0394 month: 15 tasks closed\", \"type\": \"TEXT\", \"characters\": \"\\n\\u0394 month: 15 tasks closed\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:151\", \"name\": \"Row 2\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:152\", \"name\": \"Cell-2-0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:153\", \"name\": \"ARPU\", \"type\": \"TEXT\", \"characters\": \"\\nARPU\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:154\", \"name\": \"Cell-2-1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:155\", \"name\": \"Avg: $42.60; Min: $31.00; Max: $55.10\", \"type\": \"TEXT\", \"characters\": \"\\nAvg: $42.60; Min: $31.00; Max: $55.10\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:156\", \"name\": \"Row 3\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:157\", \"name\": \"Cell-3-0\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:158\", \"name\": \"Backorders\", \"type\": \"TEXT\", \"characters\": \"\\nBackorders\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:159\", \"name\": \"Cell-3-1\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:160\", \"name\": \"Range: -3 to 7 items\", \"type\": \"TEXT\", \"characters\": \"\\nRange: -3 to 7 items\\n\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 18.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}]}]}]}]}]}}\n```\n\n**Instruction**\nIn all tables throughout the presentation, find any negative numbers and format them to be red and bold.\n\n\n---\nLoaded document structure (use these node IDs in your tool calls):\nRetrieved page structure for \"Page 1\""
+      }
+    ]
+  },
+  {
+    "id": "msg_0153ibKe6ZromPRied5u7cto",
+    "timestamp": 1780666595200,
+    "type": "agent_request",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "I'll analyze the document to find all negative numbers in the tables across all slides, then format them to be red and bold.\n\n**Plan:**\n1. Identify all text nodes with negative numbers:\n   - Slide 2 (Region Table): `-$15,250` (1:69), `-$15,500` (1:87)\n   - Slide 3 (KPI Table): `–5.6%` (1:120), `-1.2%` (1:131)\n   - Slide 4 (Metric Table): `Change: -12 units vs plan` (1:145), `Range: -3 to 7 items` (1:160)\n\n2. For the Metric Table cells, the negative numbers are embedded in text — I need to apply range-based styling to only the negative portions.\n\n3. For standalone negative number cells, apply bold + red to the entire text node.\n\nLet me batch all changes:"
+      }
+    ],
+    "calls": [
+      {
+        "id": "toolu_01RgycEWKT9GKUYUJdPFbEE2",
+        "call_id": "",
+        "name": "batch_execute",
+        "arguments": {
+          "operations": [
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:69",
+                "fontColor": {
+                  "r": 1,
+                  "g": 0,
+                  "b": 0
+                }
+              }
+            },
+            {
+              "command": "set_text_font",
+              "params": {
+                "nodeId": "1:69",
+                "fontFamily": "Inter",
+                "fontStyle": "Bold"
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:87",
+                "fontColor": {
+                  "r": 1,
+                  "g": 0,
+                  "b": 0
+                }
+              }
+            },
+            {
+              "command": "set_text_font",
+              "params": {
+                "nodeId": "1:87",
+                "fontFamily": "Inter",
+                "fontStyle": "Bold"
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:120",
+                "fontColor": {
+                  "r": 1,
+                  "g": 0,
+                  "b": 0
+                }
+              }
+            },
+            {
+              "command": "set_text_font",
+              "params": {
+                "nodeId": "1:120",
+                "fontFamily": "Inter",
+                "fontStyle": "Bold"
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "params": {
+                "nodeId": "1:131",
+                "fontColor": {
+                  "r": 1,
+                  "g": 0,
+                  "b": 0
+                }
+              }
+            },
+            {
+              "command": "set_text_font",
+              "params": {
+                "nodeId": "1:131",
+                "fontFamily": "Inter",
+                "fontStyle": "Bold"
+              }
+            },
+            {
+              "command": "set_text_range_style",
+              "params": {
+                "nodeId": "1:145",
+                "ranges": [
+                  {
+                    "start": 9,
+                    "end": 12,
+                    "color": {
+                      "r": 1,
+                      "g": 0,
+                      "b": 0
+                    },
+                    "fontStyle": "Bold",
+                    "fontFamily": "Inter"
+                  }
+                ]
+              }
+            },
+            {
+              "command": "set_text_range_style",
+              "params": {
+                "nodeId": "1:160",
+                "ranges": [
+                  {
+                    "start": 8,
+                    "end": 10,
+                    "color": {
+                      "r": 1,
+                      "g": 0,
+                      "b": 0
+                    },
+                    "fontStyle": "Bold",
+                    "fontFamily": "Inter"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "f510d18b-3619-43d1-8988-ad2a04883555",
+    "timestamp": 1780666595352,
+    "role": "tool",
+    "type": "tool_response",
+    "content": [
+      {
+        "type": "text",
+        "text": "Batch executed 10 operations: 10/10 succeeded\n{\n  \"results\": [\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5751\"\n      }\n    },\n    {\n      \"command\": \"set_text_font\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5751\",\n        \"fontName\": {\n          \"family\": \"Inter\",\n          \"style\": \"Bold\"\n        }\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5769\"\n      }\n    },\n    {\n      \"command\": \"set_text_font\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5769\",\n        \"fontName\": {\n          \"family\": \"Inter\",\n          \"style\": \"Bold\"\n        }\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5803\"\n      }\n    },\n    {\n      \"command\": \"set_text_font\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5803\",\n        \"fontName\": {\n          \"family\": \"Inter\",\n          \"style\": \"Bold\"\n        }\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5814\"\n      }\n    },\n    {\n      \"command\": \"set_text_font\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5814\",\n        \"fontName\": {\n          \"family\": \"Inter\",\n          \"style\": \"Bold\"\n        }\n      }\n    },\n    {\n      \"command\": \"set_text_range_style\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5829\",\n        \"rangesApplied\": 1\n      }\n    },\n    {\n      \"command\": \"set_text_range_style\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5844\",\n        \"rangesApplied\": 1\n      }\n    }\n  ],\n  \"total\": 10,\n  \"succeeded\": 10\n}"
+      }
+    ],
+    "results": [
+      {
+        "id": "toolu_01RgycEWKT9GKUYUJdPFbEE2",
+        "call_id": "",
+        "name": "batch_execute",
+        "content": [
+          {
+            "type": "text",
+            "text": "Batch executed 10 operations: 10/10 succeeded"
+          },
+          {
+            "type": "text",
+            "text": "{\n  \"results\": [\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5751\"\n      }\n    },\n    {\n      \"command\": \"set_text_font\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5751\",\n        \"fontName\": {\n          \"family\": \"Inter\",\n          \"style\": \"Bold\"\n        }\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5769\"\n      }\n    },\n    {\n      \"command\": \"set_text_font\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5769\",\n        \"fontName\": {\n          \"family\": \"Inter\",\n          \"style\": \"Bold\"\n        }\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5803\"\n      }\n    },\n    {\n      \"command\": \"set_text_font\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5803\",\n        \"fontName\": {\n          \"family\": \"Inter\",\n          \"style\": \"Bold\"\n        }\n      }\n    },\n    {\n      \"command\": \"set_text_properties\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5814\"\n      }\n    },\n    {\n      \"command\": \"set_text_font\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5814\",\n        \"fontName\": {\n          \"family\": \"Inter\",\n          \"style\": \"Bold\"\n        }\n      }\n    },\n    {\n      \"command\": \"set_text_range_style\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5829\",\n        \"rangesApplied\": 1\n      }\n    },\n    {\n      \"command\": \"set_text_range_style\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"46:5844\",\n        \"rangesApplied\": 1\n      }\n    }\n  ],\n  \"total\": 10,\n  \"succeeded\": 10\n}"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "results": [
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:5751"
+              }
+            },
+            {
+              "command": "set_text_font",
+              "success": true,
+              "result": {
+                "id": "46:5751",
+                "fontName": {
+                  "family": "Inter",
+                  "style": "Bold"
+                }
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:5769"
+              }
+            },
+            {
+              "command": "set_text_font",
+              "success": true,
+              "result": {
+                "id": "46:5769",
+                "fontName": {
+                  "family": "Inter",
+                  "style": "Bold"
+                }
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:5803"
+              }
+            },
+            {
+              "command": "set_text_font",
+              "success": true,
+              "result": {
+                "id": "46:5803",
+                "fontName": {
+                  "family": "Inter",
+                  "style": "Bold"
+                }
+              }
+            },
+            {
+              "command": "set_text_properties",
+              "success": true,
+              "result": {
+                "id": "46:5814"
+              }
+            },
+            {
+              "command": "set_text_font",
+              "success": true,
+              "result": {
+                "id": "46:5814",
+                "fontName": {
+                  "family": "Inter",
+                  "style": "Bold"
+                }
+              }
+            },
+            {
+              "command": "set_text_range_style",
+              "success": true,
+              "result": {
+                "id": "46:5829",
+                "rangesApplied": 1
+              }
+            },
+            {
+              "command": "set_text_range_style",
+              "success": true,
+              "result": {
+                "id": "46:5844",
+                "rangesApplied": 1
+              }
+            }
+          ],
+          "total": 10,
+          "succeeded": 10
+        }
+      }
+    ]
+  },
+  {
+    "id": "msg_0136zK9GJoP6TcQnsSub4Crk",
+    "timestamp": 1780666605498,
+    "type": "agent_request",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "All 10 operations succeeded. Here's a summary of what was formatted as **red and bold**:\n\n| Slide | Table | Cell | Value |\n|-------|-------|------|-------|\n| Slide 2 | Region Table | Row 1, Profit | `-$15,250` |\n| Slide 2 | Region Table | Row 3, Profit | `-$15,500` |\n| Slide 3 | KPI Table | Row 1 (Churn), Q3 | `–5.6%` |\n| Slide 3 | KPI Table | Row 2 (YoY Growth), Q3 | `-1.2%` |\n| Slide 4 | Metric Table | Units note | `-12` (within \"Change: -12 units vs plan\") |\n| Slide 4 | Metric Table | Backorders note | `-3` (within \"Range: -3 to 7 items\") |\n\nFor standalone negative number cells, the entire cell text was made red and bold. For mixed-content cells (Metric Table), only the negative number portion was styled red and bold while the surrounding text remained unchanged."
+      }
+    ],
+    "calls": []
+  }
+]

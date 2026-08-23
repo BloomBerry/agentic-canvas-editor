@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 14: Bold Title (A)",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.598,
+    "input_tokens": 1358,
+    "output_tokens": 118,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000732,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 553,
+        "output_tokens": 32,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.2812209129333496
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 805,
+        "output_tokens": 86,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.3165910243988037
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.133807,
+    "if_judge_cost": 0.011511,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000732,
+    "total_cost": 0.14605
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent made the main title text bold on every slide that has a title from slides 2\u201315, left slide 1 unchanged as requested, and made no unrelated edits.",
+      "prompt": "Make the title on every slide bold, except for the main title slide (slide 1).",
+      "inference_sec": 50.85031509399414,
+      "judge_sec": 7.328417062759399,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 2779,
+          "output_tokens": 1288,
+          "cache_read_input_tokens": 79697,
+          "cache_creation_5m": 21931,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.133807,
+          "n_responses": 2,
+          "elapsed_sec": 50.85
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 7.328,
+          "input_tokens": 7281,
+          "output_tokens": 241,
+          "reasoning_tokens": 179,
+          "cost_usd": 0.011511,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

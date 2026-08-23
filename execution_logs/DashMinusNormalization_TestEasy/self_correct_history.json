@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 86: Dash and Minus Normalization",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 1.875,
+    "input_tokens": 1348,
+    "output_tokens": 79,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000666,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 548,
+        "output_tokens": 39,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.8854069709777832
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 800,
+        "output_tokens": 40,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.9891493320465088
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.038532,
+    "if_judge_cost": 0.003691,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000666,
+    "total_cost": 0.042889
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent correctly changed the date range hyphen to an en dash, the negative temperature hyphen to a proper minus sign, and both clause-break em dashes to spaced en dashes with no unrelated edits.",
+      "prompt": "On this slide, please correct the dashes and minus signs to follow standard typographic rules. For the date range, use an en dash. For the negative temperature, use a proper minus sign. For the clause breaks, replace the em dashes with spaced en dashes.",
+      "inference_sec": 8.887970924377441,
+      "judge_sec": 2.9212889671325684,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 387,
+          "output_tokens": 366,
+          "cache_read_input_tokens": 61359,
+          "cache_creation_5m": 3593,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.038532,
+          "n_responses": 2,
+          "elapsed_sec": 8.888
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 2.921,
+          "input_tokens": 1969,
+          "output_tokens": 123,
+          "reasoning_tokens": 61,
+          "cost_usd": 0.003691,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

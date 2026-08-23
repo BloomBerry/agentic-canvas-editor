@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 24: Add Agenda Slide After First",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 4.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.893,
+    "input_tokens": 1558,
+    "output_tokens": 87,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000762,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 905,
+        "output_tokens": 49,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.4160499572753906
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 653,
+        "output_tokens": 38,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.476639986038208
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.394835,
+    "if_judge_cost": 0.014828,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000762,
+    "total_cost": 0.410425
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 4.0,
+      "IF_reason": "The agent correctly inserted a new slide immediately after the title slide with the title 'Agenda' and all requested section headings, item numbers, titles, and descriptions, with only minor extra template/sidebar text such as 'AGENDA' and '00' beyond the requested content.",
+      "prompt": "After the title slide, add a new slide titled 'Agenda'. The agenda should list these three sections:\n\nSection 1:\n02. Founding Story: Origin and background.\n03. Mission: Core purpose and goals.\n04. Values: Shared beliefs and principles.\n\nSection 2: Tools\n06. Communication: Channels and protocols.\n08. Design: Design standards and aesthetics.\n\nSection 3: Process\n10. Time: Scheduling, deadlines, and management.\n11. Feedback: Guidelines for giving and receiving input.",
+      "inference_sec": 92.31733131408691,
+      "judge_sec": 15.376426219940186,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 26040,
+          "output_tokens": 5559,
+          "cache_read_input_tokens": 421154,
+          "cache_creation_5m": 28529,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.394835,
+          "n_responses": 9,
+          "elapsed_sec": 92.317
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 15.376,
+          "input_tokens": 7142,
+          "output_tokens": 590,
+          "reasoning_tokens": 510,
+          "cost_usd": 0.014828,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

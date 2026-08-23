@@ -1,0 +1,111 @@
+{
+  "case_name": "Case 31: Fix Text Overflow",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 2,
+  "final_IF": 2.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.534,
+    "input_tokens": 1316,
+    "output_tokens": 82,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000658,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 784,
+        "output_tokens": 43,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.2671120166778564
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 532,
+        "output_tokens": 39,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.2671751976013184
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.121627,
+    "if_judge_cost": 0.022795,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000658,
+    "total_cost": 0.14508
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 3.0,
+      "IF_reason": "The agent made the main text fit visually by greatly reducing the font size and height, but it did not actually resize the text box width to address the stated issue of it being too wide/off the right side, and the bottom text appears very close to the slide edge.",
+      "prompt": "The main text box on this slide is too wide and goes off the right side of the screen. Please resize it so it fits entirely on the slide, making sure all the text is still visible.",
+      "inference_sec": 18.974573135375977,
+      "judge_sec": 15.430474996566772,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 799,
+          "output_tokens": 641,
+          "cache_read_input_tokens": 62863,
+          "cache_creation_5m": 5097,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.049985,
+          "n_responses": 2,
+          "elapsed_sec": 18.975
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 15.43,
+          "input_tokens": 4366,
+          "output_tokens": 590,
+          "reasoning_tokens": 516,
+          "cost_usd": 0.011358,
+          "calls": 1
+        },
+        "distill": {}
+      },
+      "feedback_used_in_next_iter": "The following is a judge's critique of your previous attempt at this slide-editing task. Address each issue raised:\n\nThe agent made the main text fit visually by greatly reducing the font size and height, but it did not actually resize the text box width to address the stated issue of it being too wide/off the right side, and the bottom text appears very close to the slide edge.",
+      "actions_history_used_in_next_iter": "- (iter 1) batch_execute(resize_node\u00d71, set_text_properties\u00d71)"
+    },
+    {
+      "iter": 2,
+      "IF": 2.0,
+      "IF_reason": "The agent did reduce the main text box width slightly and made the text smaller so it no longer runs off the right edge, but it also made a large unrequested font-size change and the rendered slide still appears to cut off the bottom of the text, so not all text is visible.",
+      "prompt": "The following is a judge's critique of your previous attempt at this slide-editing task. Address each issue raised:\n\nThe agent made the main text fit visually by greatly reducing the font size and height, but it did not actually resize the text box width to address the stated issue of it being too wide/off the right side, and the bottom text appears very close to the slide edge.",
+      "inference_sec": 24.195605039596558,
+      "judge_sec": 12.774565696716309,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 3579,
+          "output_tokens": 776,
+          "cache_read_input_tokens": 123653,
+          "cache_creation_5m": 3245,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.071642,
+          "n_responses": 4,
+          "elapsed_sec": 24.196
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 12.775,
+          "input_tokens": 4398,
+          "output_tokens": 594,
+          "reasoning_tokens": 516,
+          "cost_usd": 0.011437,
+          "calls": 1
+        }
+      },
+      "regression": true,
+      "prev_IF": 3.0
+    }
+  ]
+}

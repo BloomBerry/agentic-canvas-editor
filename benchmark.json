@@ -1,0 +1,9 @@
+[
+  {
+    "name": "Case 108: ConvertTableToBarChart",
+    "prompt": "On slide 2, convert the table data showing uninsured rates into a bar chart. Also, create a custom legend for the chart on the right.",
+    "original": "data/ConvertTableToBarChart_TestA",
+    "ground_truth": "data/ConvertTableToBarChart_GroundTruthA",
+    "category": ["Content", "Layout"]
+  }
+]

@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 70: Format Python Code Blocks (Dark Theme, Multi-Slide)",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.745,
+    "input_tokens": 1342,
+    "output_tokens": 105,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000705,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 545,
+        "output_tokens": 38,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.9443960189819336
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 797,
+        "output_tokens": 67,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.8004870414733887
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.406027,
+    "if_judge_cost": 0.010377,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000705,
+    "total_cost": 0.41710900000000006
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent formatted the Python code boxes on slides 2, 3, and 4 with a dark background, monospace font, and multi-color syntax highlighting in a VS Code-like style, with no unrelated slide edits beyond adapting the surrounding theme.",
+      "prompt": "On slides 2, 3, and 4, format the large text boxes containing Python code. Apply a dark theme with syntax highlighting, similar to a VS Code style.",
+      "inference_sec": 130.50811409950256,
+      "judge_sec": 7.126830101013184,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 18431,
+          "output_tokens": 9536,
+          "cache_read_input_tokens": 513000,
+          "cache_creation_5m": 14345,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.406027,
+          "n_responses": 14,
+          "elapsed_sec": 130.508
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 7.127,
+          "input_tokens": 6102,
+          "output_tokens": 275,
+          "reasoning_tokens": 205,
+          "cost_usd": 0.010377,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

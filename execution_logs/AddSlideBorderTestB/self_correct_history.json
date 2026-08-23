@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 82: Add Slide Border",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 4.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.88,
+    "input_tokens": 1306,
+    "output_tokens": 74,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000641,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 527,
+        "output_tokens": 38,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.234740972518921
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 779,
+        "output_tokens": 36,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.645122766494751
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.061445,
+    "if_judge_cost": 0.008879,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000641,
+    "total_cost": 0.070965
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 4.0,
+      "IF_reason": "The agent added a border rectangle to all five slides with no unrelated edits, though the diff does not clearly confirm the border is thin/dark gray or inset specifically around the content rather than the full slide edge.",
+      "prompt": "On every slide, add a thin, dark gray border around the content.",
+      "inference_sec": 20.405447959899902,
+      "judge_sec": 16.34194302558899,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 1432,
+          "output_tokens": 1124,
+          "cache_read_input_tokens": 63435,
+          "cache_creation_5m": 5669,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.061445,
+          "n_responses": 2,
+          "elapsed_sec": 20.405
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 16.342,
+          "input_tokens": 2479,
+          "output_tokens": 578,
+          "reasoning_tokens": 516,
+          "cost_usd": 0.008879,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

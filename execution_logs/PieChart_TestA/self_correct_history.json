@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 29: Convert Bar Chart to Pie Chart",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 4.754,
+    "input_tokens": 1356,
+    "output_tokens": 80,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.00067,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 552,
+        "output_tokens": 31,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 2.089390993118286
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 804,
+        "output_tokens": 49,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 2.66487193107605
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.113155,
+    "if_judge_cost": 0.010757,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.00067,
+    "total_cost": 0.12458200000000001
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent removed the existing row/bar chart on slide 3 and added a donut chart frame at exactly the same x/y position and width/height, with no unrelated edits.",
+      "prompt": "On slide 3, replace the existing row chart with a donut chart. The donut chart should occupy the same position and size as the original chart.",
+      "inference_sec": 28.074915170669556,
+      "judge_sec": 4.393767833709717,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 1414,
+          "output_tokens": 851,
+          "cache_read_input_tokens": 183882,
+          "cache_creation_5m": 10929,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.113155,
+          "n_responses": 5,
+          "elapsed_sec": 28.075
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 4.394,
+          "input_tokens": 6966,
+          "output_tokens": 205,
+          "reasoning_tokens": 150,
+          "cost_usd": 0.010757,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 81: Add Company Logo",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.3,
+    "input_tokens": 1300,
+    "output_tokens": 91,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000666,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 524,
+        "output_tokens": 30,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.978269100189209
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 776,
+        "output_tokens": 61,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.3214590549468994
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.342495,
+    "if_judge_cost": 0.0186,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000666,
+    "total_cost": 0.361761
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The icon/logo-only page was removed, and the Sesterce logo from that page appears in an appropriate corner on each remaining slide with no unrelated substantive edits.",
+      "prompt": "Add company logo (from page 1) to the best corner of every slide. Remove the icon page afterwards.",
+      "inference_sec": 50.307589054107666,
+      "judge_sec": 21.95349907875061,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 4265,
+          "output_tokens": 1313,
+          "cache_read_input_tokens": 552986,
+          "cache_creation_5m": 38429,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.342495,
+          "n_responses": 9,
+          "elapsed_sec": 50.308
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 21.953,
+          "input_tokens": 8280,
+          "output_tokens": 825,
+          "reasoning_tokens": 773,
+          "cost_usd": 0.0186,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

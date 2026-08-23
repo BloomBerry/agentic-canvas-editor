@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 37: Add Transitions",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 3.139,
+    "input_tokens": 1384,
+    "output_tokens": 68,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000662,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 566,
+        "output_tokens": 31,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.4808011054992676
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 818,
+        "output_tokens": 37,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.6580748558044434
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.108295,
+    "if_judge_cost": 0.010514,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000662,
+    "total_cost": 0.119471
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent applied a DISSOLVE transition to every slide 1\u201318 and made no unrelated edits.",
+      "prompt": "Apply a 'Dissolve' transition to all slides in the presentation.",
+      "inference_sec": 30.475637912750244,
+      "judge_sec": 4.289273262023926,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 4331,
+          "output_tokens": 947,
+          "cache_read_input_tokens": 73511,
+          "cache_creation_5m": 15745,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.108295,
+          "n_responses": 2,
+          "elapsed_sec": 30.476
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 4.289,
+          "input_tokens": 7731,
+          "output_tokens": 85,
+          "reasoning_tokens": 44,
+          "cost_usd": 0.010514,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

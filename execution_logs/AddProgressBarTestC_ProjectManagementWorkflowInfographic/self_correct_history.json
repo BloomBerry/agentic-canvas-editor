@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 84: Add Progress Bar",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 1.458,
+    "input_tokens": 1324,
+    "output_tokens": 65,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000634,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 788,
+        "output_tokens": 35,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.6952948570251465
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 536,
+        "output_tokens": 30,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.7630231380462646
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.115367,
+    "if_judge_cost": 0.007563,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000634,
+    "total_cost": 0.123564
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent added a bottom progress track and proportionally increasing progress bar to all 10 slides, correctly representing presentation progress with no unrelated edits.",
+      "prompt": "Add a progress bar to the bottom of every slide to track the presentation's progress.",
+      "inference_sec": 42.04693794250488,
+      "judge_sec": 4.555417060852051,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 4392,
+          "output_tokens": 2547,
+          "cache_read_input_tokens": 69286,
+          "cache_creation_5m": 11520,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.115367,
+          "n_responses": 2,
+          "elapsed_sec": 42.047
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 4.555,
+          "input_tokens": 4738,
+          "output_tokens": 164,
+          "reasoning_tokens": 116,
+          "cost_usd": 0.007563,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

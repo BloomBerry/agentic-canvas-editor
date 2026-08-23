@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 49: Normalize Thousand Separators",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 1.979,
+    "input_tokens": 1414,
+    "output_tokens": 69,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000676,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 833,
+        "output_tokens": 36,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.9254918098449707
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 581,
+        "output_tokens": 33,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.0533480644226074
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.113956,
+    "if_judge_cost": 0.012731,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000676,
+    "total_cost": 0.127363
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent correctly added thousands separators to all non-year numbers 1,000 or larger visible in the deck\u20143651, 1000, and 2415 on slide 6\u2014and left the year-like date 12.12.2121 unchanged, with no unrelated edits.",
+      "prompt": "Go through the entire presentation and add comma separators for thousands to all numbers 1,000 and larger, except number representing years.",
+      "inference_sec": 39.74988913536072,
+      "judge_sec": 6.5741870403289795,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 763,
+          "output_tokens": 523,
+          "cache_read_input_tokens": 79122,
+          "cache_creation_5m": 21356,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.113956,
+          "n_responses": 2,
+          "elapsed_sec": 39.75
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 6.574,
+          "input_tokens": 8257,
+          "output_tokens": 241,
+          "reasoning_tokens": 164,
+          "cost_usd": 0.012731,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

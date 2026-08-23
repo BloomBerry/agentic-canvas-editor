@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 89: Animal Research Poster",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 4.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.69,
+    "input_tokens": 1280,
+    "output_tokens": 89,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000654,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 766,
+        "output_tokens": 48,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.2061750888824463
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 514,
+        "output_tokens": 41,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.4837470054626465
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.139002,
+    "if_judge_cost": 0.015586,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000654,
+    "total_cost": 0.15524199999999996
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 4.0,
+      "IF_reason": "The agent replaced essentially all Lorem Ipsum placeholders with relevant toucan facts and updated the sources with real citations, but font-size adjustment was only minimally applied and some longer text appears cramped/partly cut off, so the formatting request is not fully satisfied.",
+      "prompt": "Replace 'Lorem Ipsum' with factual info for toucan research poster. Adjust font sizes and update source citations.",
+      "inference_sec": 45.3725950717926,
+      "judge_sec": 17.839547157287598,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 5985,
+          "output_tokens": 2733,
+          "cache_read_input_tokens": 73253,
+          "cache_creation_5m": 15487,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.139002,
+          "n_responses": 2,
+          "elapsed_sec": 45.373
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 17.84,
+          "input_tokens": 7781,
+          "output_tokens": 586,
+          "reasoning_tokens": 516,
+          "cost_usd": 0.015586,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

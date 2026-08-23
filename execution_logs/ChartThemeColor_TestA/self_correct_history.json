@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 33: Fix Chart Theme Color",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.413,
+    "input_tokens": 1362,
+    "output_tokens": 67,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000652,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 807,
+        "output_tokens": 34,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.0126659870147705
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 555,
+        "output_tokens": 33,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.4007890224456787
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.212868,
+    "if_judge_cost": 0.031576,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000652,
+    "total_cost": 0.245096
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent changed the purple fills in the chart elements and legends on slides 6\u20138 and the purple timeline/chart bars on slide 10 to a dark blue while leaving the other chart colors unchanged.",
+      "prompt": "Adjust theme colors: replace purple in charts with dark blue, but leave other colors intact.",
+      "inference_sec": 64.54146790504456,
+      "judge_sec": 14.225291013717651,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 1814,
+          "output_tokens": 1015,
+          "cache_read_input_tokens": 100944,
+          "cache_creation_5m": 43178,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.212868,
+          "n_responses": 2,
+          "elapsed_sec": 64.541
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 14.225,
+          "input_tokens": 20653,
+          "output_tokens": 576,
+          "reasoning_tokens": 516,
+          "cost_usd": 0.031576,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "case_name": "Case 96: Reading Order Fix (Complex Slides)",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 2,
+  "final_IF": 4.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.199,
+    "input_tokens": 1348,
+    "output_tokens": 92,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000686,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 800,
+        "output_tokens": 57,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.886368989944458
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 548,
+        "output_tokens": 35,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.312730073928833
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.206146,
+    "if_judge_cost": 0.0343,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000686,
+    "total_cost": 0.24113199999999999
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 2.0,
+      "IF_reason": "The agent only corrected slide 5 by moving the title before the body text and adjusting their positions, but made no changes to slides 2\u20134 despite their layouts not matching the requested title \u2192 main text \u2192 image logical flow.",
+      "prompt": "On slides 2 through 5, correct the reading order for accessibility. Ensure the slide title is read first, followed by the main text content, and then the image. Adjust the layout to match this logical flow.",
+      "inference_sec": 28.558582067489624,
+      "judge_sec": 13.553175926208496,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 993,
+          "output_tokens": 1151,
+          "cache_read_input_tokens": 102967,
+          "cache_creation_5m": 8921,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.084588,
+          "n_responses": 3,
+          "elapsed_sec": 28.559
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 13.553,
+          "input_tokens": 5095,
+          "output_tokens": 582,
+          "reasoning_tokens": 516,
+          "cost_usd": 0.012189,
+          "calls": 1
+        },
+        "distill": {}
+      },
+      "feedback_used_in_next_iter": "The following is a judge's critique of your previous attempt at this slide-editing task. Address each issue raised:\n\nThe agent only corrected slide 5 by moving the title before the body text and adjusting their positions, but made no changes to slides 2\u20134 despite their layouts not matching the requested title \u2192 main text \u2192 image logical flow.",
+      "actions_history_used_in_next_iter": "- (iter 1) reorder_node({\"nodeId\": \"1:59\", \"direction\": \"BOTTOM\"})\n- (iter 1) reparent_node({\"nodeId\": \"1:59\", \"parentId\": \"1:57\", \"index\": 0})"
+    },
+    {
+      "iter": 2,
+      "IF": 4.0,
+      "IF_reason": "The agent mostly corrected slides 2\u20135 into a logical top-to-bottom flow with title before main text and image where present, and fixed slide 5\u2019s title/text order, but some layouts remain imperfect with horizontally off-canvas or awkwardly placed content/images on slides 2\u20134.",
+      "prompt": "The following is a judge's critique of your previous attempt at this slide-editing task. Address each issue raised:\n\nThe agent only corrected slide 5 by moving the title before the body text and adjusting their positions, but made no changes to slides 2\u20134 despite their layouts not matching the requested title \u2192 main text \u2192 image logical flow.",
+      "inference_sec": 24.66582489013672,
+      "judge_sec": 41.83333611488342,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 16642,
+          "output_tokens": 1403,
+          "cache_read_input_tokens": 123635,
+          "cache_creation_5m": 3599,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.121558,
+          "n_responses": 4,
+          "elapsed_sec": 24.666
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 41.833,
+          "input_tokens": 4641,
+          "output_tokens": 1631,
+          "reasoning_tokens": 1552,
+          "cost_usd": 0.022111,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

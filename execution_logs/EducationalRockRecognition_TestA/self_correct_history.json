@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 78: Rock Cycle Recognition",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 4.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.308,
+    "input_tokens": 1392,
+    "output_tokens": 95,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000709,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 822,
+        "output_tokens": 53,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.1538429260253906
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 570,
+        "output_tokens": 42,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.1544301509857178
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.708271,
+    "if_judge_cost": 0.016924,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000709,
+    "total_cost": 0.725904
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 4.0,
+      "IF_reason": "The agent substantially overhauled all three slides: the title slide uses a modern two-column dark/image layout, slide 2 is reorganized into three image cards with summarized rock-type descriptions, and slide 3 replaces the long text with a visual rock-cycle diagram, though the cycle arrows/process relationships are somewhat unclear and not perfectly polished.",
+      "prompt": "Overhaul this presentation to be more professional and visually engaging. Redesign the title slide with a modern two-column layout. On the second slide, organize the rock types into a clear three-column format with images and summarized descriptions. Finally, transform the text-heavy rock cycle on the third slide into a clean, visual diagram.",
+      "inference_sec": 163.13168168067932,
+      "judge_sec": 21.15440797805786,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 57791,
+          "output_tokens": 10844,
+          "cache_read_input_tokens": 756407,
+          "cache_creation_5m": 38751,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.708271,
+          "n_responses": 16,
+          "elapsed_sec": 163.132
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 21.154,
+          "input_tokens": 8715,
+          "output_tokens": 603,
+          "reasoning_tokens": 516,
+          "cost_usd": 0.016924,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 48: Add Slide Numbers",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 4.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 1.782,
+    "input_tokens": 1398,
+    "output_tokens": 65,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000663,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 573,
+        "output_tokens": 32,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.8644130229949951
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 825,
+        "output_tokens": 33,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.9179861545562744
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.207068,
+    "if_judge_cost": 0.017571,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000663,
+    "total_cost": 0.225302
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 4.0,
+      "IF_reason": "The agent added the requested date and correct slide number to the bottom corners of all 20 slides, but slide 1 already had the date and the agent added a duplicate overlapping date there.",
+      "prompt": "Add date 'February 9, 2026' to bottom left and slide number to bottom right of every slide.",
+      "inference_sec": 69.83577919006348,
+      "judge_sec": 12.443175077438354,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 5148,
+          "output_tokens": 4423,
+          "cache_read_input_tokens": 124885,
+          "cache_creation_5m": 23417,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.207068,
+          "n_responses": 3,
+          "elapsed_sec": 69.836
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 12.443,
+          "input_tokens": 10353,
+          "output_tokens": 463,
+          "reasoning_tokens": 405,
+          "cost_usd": 0.017571,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

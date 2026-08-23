@@ -1,0 +1,131 @@
+agent_type: single_figma_slide
+
+benchmark_dir: ../data
+results_dir: ../results
+channels:
+  channel_1:
+    api_base_url: http://localhost:3001
+  channel_2:
+    api_base_url:
+  channel_3:
+    api_base_url:
+  channel_4:
+    api_base_url:
+  channel_5:
+    api_base_url:
+  channel_6:
+    api_base_url:
+  channel_7:
+    api_base_url:
+
+models:
+  gpt-4o:
+    provider: openai
+    name: gpt-4o-2024-08-06
+    temperature: 0.0
+    input_cost: 0.0025
+    output_cost: 0.0125
+    max_turns: 10
+    max_calls: 50
+    max_tokens: 16384
+  gpt-4.1:
+    provider: openai
+    name: gpt-4.1-2025-04-14
+    temperature: 0.0
+    input_cost: 0.002
+    output_cost: 0.008
+    max_turns: 10
+    max_calls: 50
+    max_tokens: 16384
+  gpt-5.2:
+    provider: openai
+    name: gpt-5.2-2025-12-11
+    temperature: 0.0
+    input_cost: 0.00175
+    output_cost: 0.014
+    max_turns: 10
+    max_calls: 100
+    max_tokens: 16384
+  gpt-5.5:
+    provider: openai
+    name: gpt-5.5
+    temperature: 0.0
+    input_cost: 0.00125
+    output_cost: 0.010
+    max_turns: 1
+    max_calls: 100
+    max_tokens: 16384
+  claude-3-5-sonnet:
+    provider: amazon
+    name: "anthropic.claude-3-5-sonnet-20241022-v2:0"
+    temperature: 0.0
+    input_cost: 0.003
+    output_cost: 0.015
+    max_turns: 10
+    max_calls: 50
+    max_tokens: 16384
+  claude-opus-4-6:
+    provider: anthropic
+    name: claude-opus-4-6
+    temperature: 0.0
+    input_cost: 0.005
+    output_cost: 0.025
+    max_turns: 10
+    max_calls: 50
+    max_tokens: 16384
+  claude-sonnet-4-6:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    temperature: 0.0
+    input_cost: 0.003
+    output_cost: 0.015
+    max_turns: 10
+    max_calls: 100
+    max_tokens: 16384
+  gemini-2.5-flash:
+    provider: google
+    name: "models/gemini-2.5-flash"
+    temperature: 0.0
+    input_cost: 0.0003
+    output_cost: 0.0025
+    max_turns: 10
+    max_calls: 50
+    max_tokens: 16384
+  gemini-2.5-pro:
+    provider: google
+    name: "models/gemini-2.5-pro"
+    temperature: 0.0
+    input_cost: 0.00125
+    output_cost: 0.01
+    max_turns: 10
+    max_calls: 50
+    max_tokens: 16384
+  gemini-3.1-pro:
+    provider: google
+    name: "models/gemini-3.1-pro-preview"
+    temperature: 0.0
+    input_cost: 0.002
+    output_cost: 0.012
+    max_turns: 10
+    max_calls: 50
+    max_tokens: 16384
+  gemini-3-flash-preview:
+    provider: google
+    name: "gemini-3-flash-preview"
+    temperature: 0.0
+    input_cost: 0.001
+    output_cost: 0.008
+    max_turns: 10
+    max_calls: 100
+    max_tokens: 32768
+    thinking_level: HIGH
+  gemini-3.5-flash:
+    provider: google
+    name: "gemini-3.5-flash"
+    temperature: 0.0
+    input_cost: 0.001
+    output_cost: 0.008
+    max_turns: 1
+    max_calls: 100
+    max_tokens: 32768
+    thinking_level: HIGH

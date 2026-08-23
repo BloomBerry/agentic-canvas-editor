@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 61: Sort By Score And Crop Image 169",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 3.438,
+    "input_tokens": 1288,
+    "output_tokens": 75,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000635,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 770,
+        "output_tokens": 43,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.5700180530548096
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 518,
+        "output_tokens": 32,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.8679070472717285
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.08161,
+    "if_judge_cost": 0.00611,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000635,
+    "total_cost": 0.088355
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The table rows were correctly reordered by the Score column in descending order, resulting in Bob 96, Eve 91, Diego 88, Alice 82, and Cara 74 with matching team values and no unrelated edits.",
+      "prompt": "In the table on the slide, sort the rows by the 'Score' column in descending order.",
+      "inference_sec": 13.249721765518188,
+      "judge_sec": 5.41489577293396,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 2178,
+          "output_tokens": 809,
+          "cache_read_input_tokens": 69028,
+          "cache_creation_5m": 11262,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.08161,
+          "n_responses": 2,
+          "elapsed_sec": 13.25
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 5.415,
+          "input_tokens": 3016,
+          "output_tokens": 234,
+          "reasoning_tokens": 169,
+          "cost_usd": 0.00611,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

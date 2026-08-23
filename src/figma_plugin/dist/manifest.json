@@ -1,0 +1,12 @@
+{
+  "name": "Figma Slides MCP",
+  "id": "figma-slides-mcp",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["slides"],
+  "networkAccess": {
+    "allowedDomains": ["*"],
+    "reasoning": "Required for WebSocket communication with MCP server"
+  }
+}

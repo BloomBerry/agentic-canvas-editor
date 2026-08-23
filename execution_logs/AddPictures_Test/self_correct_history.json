@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 56: Add Pictures",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 4.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.969,
+    "input_tokens": 1310,
+    "output_tokens": 68,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000633,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 529,
+        "output_tokens": 26,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.1096608638763428
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 781,
+        "output_tokens": 42,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.8593499660491943
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.181233,
+    "if_judge_cost": 0.00926,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000633,
+    "total_cost": 0.191126
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 4.0,
+      "IF_reason": "The agent added relevant pictures above all three bottom words\u2014baseball, airplane, and basketball\u2014but also included visible photo-credit text under each image, which is extra content not requested.",
+      "prompt": "For each of the words at the bottom of the slide (baseball, airplane, basketball), add a relevant icon or picture above the text.",
+      "inference_sec": 55.20756721496582,
+      "judge_sec": 12.058406114578247,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 7981,
+          "output_tokens": 1914,
+          "cache_read_input_tokens": 211963,
+          "cache_creation_5m": 17331,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.181233,
+          "n_responses": 6,
+          "elapsed_sec": 55.208
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 12.058,
+          "input_tokens": 4504,
+          "output_tokens": 363,
+          "reasoning_tokens": 307,
+          "cost_usd": 0.00926,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

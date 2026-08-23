@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 71: Conditional Table Formatting (Negative Numbers)",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.649,
+    "input_tokens": 1306,
+    "output_tokens": 78,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000647,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 527,
+        "output_tokens": 43,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.3240699768066406
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 779,
+        "output_tokens": 35,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.3245460987091064
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.08024,
+    "if_judge_cost": 0.009473,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000647,
+    "total_cost": 0.09036
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent correctly found every negative number in all table cells across slides 2\u20134 and formatted each one red and bold, including embedded negatives like \u201c-12\u201d and \u201c-3,\u201d with no unrelated edits.",
+      "prompt": "In all tables throughout the presentation, find any negative numbers and format them to be red and bold.",
+      "inference_sec": 27.287240028381348,
+      "judge_sec": 7.684024095535278,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 1911,
+          "output_tokens": 1239,
+          "cache_read_input_tokens": 67295,
+          "cache_creation_5m": 9529,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.08024,
+          "n_responses": 2,
+          "elapsed_sec": 27.287
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 7.684,
+          "input_tokens": 5146,
+          "output_tokens": 304,
+          "reasoning_tokens": 241,
+          "cost_usd": 0.009473,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

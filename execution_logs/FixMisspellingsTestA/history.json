@@ -1,0 +1,1451 @@
+[
+  {
+    "id": "b558b56e-5c8e-40d0-8432-ef1f16adfc91",
+    "timestamp": 1780729730351,
+    "type": "user_request",
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "\n**Context**\nYou are a presentation-design agent with access to Figma Slides via tool calls.\nFollow the **Instruction** to modify the presentation.\nRefer to the **Tool Use Principles** and **Figma Slides Basics** for guidance.\n\n**Tool Use Principles**\n\nYour task is to produce an array of tool (function) calls necessary to modify the presentation in one turn.\nInclude every necessary tool (function) calls and do not output any text other than the function calls themselves.\n\n1. Plan first\nBriefly outline the key steps you will take.\n2. Be exhaustive\nConsider all parameters, options, ordering, and dependencies necessary to make the modification in one turn.\n3. Preserve existing content\nDo NOT delete or recreate elements that should remain unchanged. Only modify what the instruction asks for.\n\n4. Use batch_execute aggressively — it supports ALL commands\nbatch_execute works with EVERY tool command: creation (create_frame, create_text, create_math, create_rectangle, etc.), modification (set_text_font, set_fill_color, move_node, resize_node, etc.), and layout (set_layout_mode, set_padding, set_item_spacing, etc.).\nALWAYS prefer ONE batch_execute call over multiple individual tool calls. Each individual tool call costs a full API round-trip.\nCRITICAL: If you need to create or modify 3+ elements, ALWAYS use batch_execute — never call create_* or set_* individually in separate tool calls.\nExample — creating multiple elements + setting properties in one call:\n  batch_execute({ operations: [\n    { command: \"create_frame\", params: { x: 0, y: 0, width: 400, height: 40, name: \"Row 1\", parentId: \"1:10\" } },\n    { command: \"create_text\", params: { x: 10, y: 5, width: 380, text: \"Hello\", fontSize: 16, parentId: \"1:10\" } },\n    { command: \"set_text_font\", params: { nodeId: \"1:23\", fontFamily: \"Inter\", fontStyle: \"Bold\" } },\n    { command: \"set_fill_color\", params: { nodeId: \"1:67\", color: \"#FF0000\" } }\n  ] })\n\n5. Text layout quality\n- ALWAYS set an explicit **width** on text nodes to prevent text overflow and overlap with adjacent elements.\n- Predict the bounding box of every element BEFORE placing it. For text nodes, rendered height ≈ ceil(text_length_px / width) × fontSize × 1.3 (line-height). Use the predicted bounding box (x, y, width, rendered_height) to ensure NO overlap with any neighboring element in all directions — check that bounding boxes do not intersect horizontally or vertically.\n- For multi-column layouts, calculate column width = (available width) / num_columns.\n6. Avoid redundant discovery\n- NEVER call check_connection_status — the connection is already established.\n- NEVER call export_json or get_page_structure — the document structure is already provided or can be obtained more efficiently.\n- Do NOT call get_all_slides if slide IDs are already provided in the context.\n- Only use get_node_info or get_node_info_by_types when you need specific node details not already visible in the provided JSON.\n- After completing modifications, do NOT make extra verification calls (get_node_info, export_slide_image) — the tool results already confirm success or failure.\n\n7. Minimize API round-trips\n- Collect ALL changes across ALL slides into a SINGLE batch_execute call when possible, rather than processing slides one-by-one.\n- Do NOT alternate focus_slide → batch_execute per slide. Instead, gather every modification and execute in one batch.\n- focus_slide is only needed before creating new nodes. For existing node modifications, batch_execute with nodeId works directly regardless of which slide is focused.\n\n8. Handle node ID staleness\n- After deleting a slide or node, ALL child node IDs within it become invalid immediately.\n- If you need to reference other nodes after a delete, call get_all_slides or get_slide_grid first to refresh the list before proceeding.\n- NEVER batch a delete_slide together with operations that reference nodes on other slides in the same batch_execute — the delete may invalidate IDs mid-batch. Instead, split into: (1) batch for modifications, (2) separate batch for deletions.\n- NEVER batch a create_slide together with its child element operations (create_text, create_rectangle, etc.) in the same batch_execute — the new slide's ID is unknown until create_slide returns, so child elements cannot specify the correct parentId.\n- CRITICAL — create_slide is NEVER the final step. After creating slides, you MUST ALWAYS follow up with batch_execute to populate them with content (backgrounds, text, shapes, etc.). A blank slide is never acceptable.\n- CRITICAL — parentId after create_slide: When adding elements to a newly created slide, you MUST include parentId (the new slide's ID) in every create_* params. Without parentId, elements are placed on the previously focused slide, NOT on the new one. Required workflow:\n  Step 1: create_slide({ column: 3, name: \"Divider\" })  → returns { id: \"11:100\" }\n  Step 2 (MANDATORY): batch_execute({ operations: [\n    { command: \"create_rectangle\", params: { x: 0, y: 0, width: 1920, height: 1080, fillColor: { r: 0, g: 0.2, b: 0.063 }, parentId: \"11:100\" } },\n    { command: \"create_text\", params: { x: 100, y: 200, text: \"Thank You\", fontSize: 71, fontColor: { r: 0.78, g: 0.94, b: 0.31 }, parentId: \"11:100\" } }\n  ] })\n  NEVER stop after Step 1 — Step 2 is required to make the slide functional.\n- NEVER batch a create_slide together with reorder_slides in the same batch_execute — the new slide's ID is unknown until create_slide returns, so it cannot be included in the slideIds array. Instead: (1) create all new slides first, (2) then call reorder_slides with the complete list of slide IDs (existing + newly created) in the desired presentation order.\n9. Deliver\nBased on the plan, respond with the exact sequence of tool (function) calls it should run.\n\n\n**Figma Slides Basics**\n\n1. Figma Slides Basics\n- You are working with Figma Slides, a presentation tool built into Figma.\n- Each slide is a top-level container (similar to a frame) that holds content elements.\n- Slides are arranged in a grid layout. Each slide has a unique ID.\n- When creating or modifying content, the parentId should be a slide ID.\n\n2. Node Hierarchy\n- All content nodes live within slides. Slides are the top-level containers.\n- Parent-child links create the hierarchy within each slide.\n- Coordinates in `relativeTransform` and `move_node` are relative to the **parent node**, not the slide root. To position a child within a frame, use coordinates relative to that frame's origin (0, 0 = top-left of the parent frame).\n\n3. Content Elements\n- Slides can contain: text nodes, rectangles, ellipses, frames, groups, graphics (SVG), charts, tables.\n- Text nodes have font family, style, size, color, and alignment properties.\n- Shapes have fill color, stroke, corner radius, and opacity properties.\n\n4. Slide Management\n- focus_slide navigates the viewport to a slide. It is ONLY required before creating new nodes (create_text, create_rectangle, etc.) on that slide.\n- For modifying existing nodes (set_text_font, set_fill_color, move_node, resize_node, etc.), use batch_execute with nodeId directly — no focus_slide needed.\n- Each slide can have transitions and skip settings.\n\n5. Slide Ordering\n- Presentation order is determined by the internal children array, NOT by x/y coordinates. move_node does NOT change slide order.\n- To reorder slides, use reorder_slides with the full list of slide IDs in the desired order.\n- Example: reorder_slides({ slideIds: [\"id_intro\", \"id_about\", \"id_work\", \"id_contact\"] })\n\n6. Deck theme consistency (new slides and new blocks only)\n- When adding a new slide or major new content block, match the deck's existing styling. Do NOT default to white background + black text unless a comparable existing slide uses exactly that pattern.\n- Before populating a new slide: inspect 1–2 comparable slides (cover, section divider, Q&A/closing, table-of-contents, or adjacent content slides) for background fill, title fontFamily/fontSize/fontStyle, title color, and recurring decorative elements.\n- Copy those exact values via fillColor/fontColor on create_rectangle/create_text, or set_fill_color/set_text_font after creation.\n- For chart/theme recolor tasks: use replace_color with the exact source and target hex from the instruction; recolor only chart/data series elements, not unrelated branding or body text.\n- Do NOT restyle existing slides or nodes unless the instruction explicitly asks for it.\n\n\n\n**Context Mode: Macro-Programmatic (Batch Operations)**\nYou are performing a batch operation across the entire presentation.\n- Below is a SKELETON view of the document showing only text content and node IDs.\n- Most rendering details (colors, fills, strokes) have been stripped for efficiency.\n- **Target slides** (the ones referenced in the instruction) include a `bounds` field on each node: `[x, y, width, height]` in absolute coordinates. Use these to reason about spatial layout (e.g. which text is below a chart, which elements overlap, etc.).\n- Plan your changes by identifying ALL matching nodes from the skeleton.\n- Generate tool calls for EVERY node that needs modification – do not skip any.\n- The full document has been imported into Figma – you can reference any node by its ID via batch_execute.\n\n\n**Document Skeleton (Text & Structure Only)**\nThe presentation has 20 slide(s).\n```json\n{\"fileName\": \"\", \"document\": {\"id\": \"0:0\", \"name\": \"Document\", \"type\": \"DOCUMENT\", \"children\": [{\"id\": \"0:1\", \"name\": \"Page 1\", \"type\": \"CANVAS\", \"children\": [{\"id\": \"1:383\", \"name\": \"Section 1\", \"type\": \"SECTION\", \"children\": [{\"id\": \"1:40\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:41\", \"name\": \"Group 2\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:42\", \"name\": \"noisy-gradients\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:43\", \"name\": \"Rectangle 15\", \"type\": \"RECTANGLE\"}]}, {\"id\": \"1:44\", \"name\": \"Group 14\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:45\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reveiws / Moblie Stratgey\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:46\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Prodcut reveiw \\u2014 Monht XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:47\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}]}, {\"id\": \"1:48\", \"name\": \"Title\", \"type\": \"TEXT\", \"characters\": \"Mobile Strategy\\nReview\", \"style\": {\"fontFamily\": \"Whyte\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 190.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:49\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:50\", \"name\": \"Frame 5\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:51\", \"name\": \"Frame 17\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:52\", \"name\": \"Frame 4\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:53\", \"name\": \"Header 3\", \"type\": \"TEXT\", \"characters\": \"Goels\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:54\", \"name\": \"Part 1\", \"type\": \"TEXT\", \"characters\": \"Part 1\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:55\", \"name\": \"Vector 1\", \"type\": \"VECTOR\"}, {\"id\": \"1:56\", \"name\": \"Frame 5\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:57\", \"name\": \"Body 3\", \"type\": \"TEXT\", \"characters\": \"Vison for the Moblie raodmap\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:58\", \"name\": \"04\", \"type\": \"TEXT\", \"characters\": \"04\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:59\", \"name\": \"Frame 6\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:60\", \"name\": \"Goels for the quater\", \"type\": \"TEXT\", \"characters\": \"Goels for the quater\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:61\", \"name\": \"05\", \"type\": \"TEXT\", \"characters\": \"05\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:62\", \"name\": \"Frame 15\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:63\", \"name\": \"Frame 14\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:64\", \"name\": \"Moblie stratgey\", \"type\": \"TEXT\", \"characters\": \"Moblie stratgey\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:65\", \"name\": \"Part 2\", \"type\": \"TEXT\", \"characters\": \"Part 2\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:66\", \"name\": \"Vector 2\", \"type\": \"VECTOR\"}, {\"id\": \"1:67\", \"name\": \"Frame 8\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:68\", \"name\": \"Reserach insihgts\", \"type\": \"TEXT\", \"characters\": \"Reserach insihgts\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:69\", \"name\": \"07\", \"type\": \"TEXT\", \"characters\": \"07\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:70\", \"name\": \"Frame 10\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:71\", \"name\": \"How we'll winn\", \"type\": \"TEXT\", \"characters\": \"How we'll winn\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:72\", \"name\": \"09\", \"type\": \"TEXT\", \"characters\": \"09\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:73\", \"name\": \"Frame 16\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:74\", \"name\": \"Frame 11\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:75\", \"name\": \"Desgin concetps\", \"type\": \"TEXT\", \"characters\": \"Desgin concetps\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:76\", \"name\": \"Part 3\", \"type\": \"TEXT\", \"characters\": \"Part 3\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:77\", \"name\": \"Vector 3\", \"type\": \"VECTOR\"}, {\"id\": \"1:78\", \"name\": \"Frame 12\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:79\", \"name\": \"Seemless sign upp\", \"type\": \"TEXT\", \"characters\": \"Seemless sign upp\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:80\", \"name\": \"13\", \"type\": \"TEXT\", \"characters\": \"13\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:81\", \"name\": \"Frame 13\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:82\", \"name\": \"Desgin quailty\", \"type\": \"TEXT\", \"characters\": \"Desgin quailty\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:83\", \"name\": \"16\", \"type\": \"TEXT\", \"characters\": \"16\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:84\", \"name\": \"Frame 18\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:85\", \"name\": \"Frame 11\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:86\", \"name\": \"Q&A\", \"type\": \"TEXT\", \"characters\": \"Q&A\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:87\", \"name\": \"Part 4\", \"type\": \"TEXT\", \"characters\": \"Part 4\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:88\", \"name\": \"Vector 3\", \"type\": \"VECTOR\"}]}]}, {\"id\": \"1:89\", \"name\": \"Header 2\", \"type\": \"TEXT\", \"characters\": \"Agenda\", \"style\": {\"fontFamily\": \"Whyte\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 96.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:90\", \"name\": \"2\", \"type\": \"TEXT\", \"characters\": \"2\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:91\", \"name\": \"Group 13\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:92\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reveiws / Moblie Stratgey\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:93\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Prodcut reveiw \\u2014 Monht XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:94\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Agendaa\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:95\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}]}]}, {\"id\": \"1:96\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:97\", \"name\": \"Group 2\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:98\", \"name\": \"noisy-gradients\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:99\", \"name\": \"Rectangle 15\", \"type\": \"RECTANGLE\"}]}, {\"id\": \"1:100\", \"name\": \"3\", \"type\": \"TEXT\", \"characters\": \"3\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:101\", \"name\": \"Header 1\", \"type\": \"TEXT\", \"characters\": \"Goals\", \"style\": {\"fontFamily\": \"Whyte\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 140.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:102\", \"name\": \"Group 3\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:103\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reveiws / Moblie Stratgey\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:104\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Prodcut reveiw \\u2014 Monht XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:105\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:106\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Goels\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:107\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:108\", \"name\": \"Header 2\", \"type\": \"TEXT\", \"characters\": \"Vision for the Mobile roadmap\", \"style\": {\"fontFamily\": \"Whyte\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 96.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:109\", \"name\": \"Body 1\", \"type\": \"TEXT\", \"characters\": \"Divee into the inovative feautres and enhancemnts that will shpae the user experiance and excede expectatoins. Exlpore the vison that will revoltionize the way peopel interact with moblie technolgy.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:110\", \"name\": \"4\", \"type\": \"TEXT\", \"characters\": \"4\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:111\", \"name\": \"Group 4\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:112\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reveiws / Moblie Stratgey\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:113\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Prodcut reveiw \\u2014 Monht XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:114\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:115\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Vison\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:116\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:117\", \"name\": \"Frame 20\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:118\", \"name\": \"Body 2\", \"type\": \"TEXT\", \"characters\": \"Goel 2\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Medium\", \"fontWeight\": 500, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:119\", \"name\": \"Body 1\", \"type\": \"TEXT\", \"characters\": \"Get feeback on fraimng\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:120\", \"name\": \"Frame 21\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:121\", \"name\": \"Body 2\", \"type\": \"TEXT\", \"characters\": \"Goel 3\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Medium\", \"fontWeight\": 500, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:122\", \"name\": \"Body 1\", \"type\": \"TEXT\", \"characters\": \"Solicit feeback for desgins\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:123\", \"name\": \"5\", \"type\": \"TEXT\", \"characters\": \"5\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:124\", \"name\": \"Frame 1\", \"type\": \"FRAME\"}, {\"id\": \"1:125\", \"name\": \"Frame 19\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:126\", \"name\": \"Body 2\", \"type\": \"TEXT\", \"characters\": \"Goel 1\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Medium\", \"fontWeight\": 500, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:127\", \"name\": \"Body 1\", \"type\": \"TEXT\", \"characters\": \"Showcaes our ponit of veiw\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:128\", \"name\": \"Frame 2\", \"type\": \"FRAME\"}, {\"id\": \"1:129\", \"name\": \"Frame 3\", \"type\": \"FRAME\"}, {\"id\": \"1:130\", \"name\": \"Group 5\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:131\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reveiws / Moblie Stratgey\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:132\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Prodcut reveiw \\u2014 Monht XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:133\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:134\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Q3 Goels\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:135\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:136\", \"name\": \"Group 2\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:137\", \"name\": \"noisy-gradients\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:138\", \"name\": \"Rectangle 15\", \"type\": \"RECTANGLE\"}]}, {\"id\": \"1:139\", \"name\": \"6\", \"type\": \"TEXT\", \"characters\": \"6\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:140\", \"name\": \"Header 1\", \"type\": \"TEXT\", \"characters\": \"Mobile Strategy\", \"style\": {\"fontFamily\": \"Whyte\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 140.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:141\", \"name\": \"Group 6\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:142\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reveiws / Moblie Stratgey\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:143\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Prodcut reveiw \\u2014 Monht XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:144\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:145\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Moblie Stratgey\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:146\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:147\", \"name\": \"Header 2\", \"type\": \"TEXT\", \"characters\": \"Research insights\", \"style\": {\"fontFamily\": \"Whyte\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 96.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:148\", \"name\": \"Body 1\", \"type\": \"TEXT\", \"characters\": \"For a succesfull Q3 raodmap stratgey, we recomend prioritzing fixng acount sign upp frction and adressing desgin paper cutts. By focussing on these aeras, you can enhanse user experiance, increse custommer satisfacton, and drive beter results for your bussiness.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:149\", \"name\": \"7\", \"type\": \"TEXT\", \"characters\": \"7\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:150\", \"name\": \"Group 12\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:151\", \"name\": \"Group 11\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:152\", \"name\": \"Group 10\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:153\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reveiws / Moblie Stratgey\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:154\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Prodcut reveiw \\u2014 Monht XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:155\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:156\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reserach insihgts\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}]}]}, {\"id\": \"1:157\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:158\", \"name\": \"Frame 18\", \"type\": \"FRAME\"}, {\"id\": \"1:159\", \"name\": \"Frame 19\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:160\", \"name\": \"Body 2\", \"type\": \"TEXT\", \"characters\": \"Useres found it dificult to logg back into thier acounts\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Medium\", \"fontWeight\": 500, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:161\", \"name\": \"Body 1\", \"type\": \"TEXT\", \"characters\": \"Meny useres reportd experiancing chalenges when tryng to logg back into thier acounts. This isue caused frustraton and ledd to a decrese in user engagment.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:162\", \"name\": \"8\", \"type\": \"TEXT\", \"characters\": \"8\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:163\", \"name\": \"Group 9\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:164\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reveiws / Moblie Stratgey\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:165\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Prodcut reveiw \\u2014 Monht XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:166\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:167\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reserach insihgts\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:168\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:169\", \"name\": \"Header 2\", \"type\": \"TEXT\", \"characters\": \"How we\\u2019ll win\", \"style\": {\"fontFamily\": \"Whyte\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 96.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:170\", \"name\": \"For a succesfull Q3 raodmap stratgey, we recomend prioritzing fixng acount sign upp frction and adressing desgin paper cutts. By focussing on these aeras, you can enhanse user experiance, increse custommer satisfacton, and drive beter results for your bussiness.\", \"type\": \"TEXT\", \"characters\": \"For a succesfull Q3 raodmap stratgey, we recomend prioritzing fixng acount sign upp frction and adressing desgin paper cutts. By focussing on these aeras, you can enhanse user experiance, increse custommer satisfacton, and drive beter results for your bussiness.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:171\", \"name\": \"9\", \"type\": \"TEXT\", \"characters\": \"9\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:172\", \"name\": \"Group 8\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:173\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reveiws / Moblie Stratgey\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:174\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Prodcut reveiw \\u2014 Monht XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:175\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:176\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"How we'll winn\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:177\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:178\", \"name\": \"Frame 19\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:179\", \"name\": \"Body 2\", \"type\": \"TEXT\", \"characters\": \"Prioritze acount sign upp\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Medium\", \"fontWeight\": 500, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:180\", \"name\": \"Body 1\", \"type\": \"TEXT\", \"characters\": \"Gian acess to personlized recomendations and a smoth browising experiance by fixng acount creaton isues.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:181\", \"name\": \"Frame 18\", \"type\": \"FRAME\"}, {\"id\": \"1:182\", \"name\": \"Frame 20\", \"type\": \"FRAME\"}, {\"id\": \"1:183\", \"name\": \"Frame 21\", \"type\": \"FRAME\"}, {\"id\": \"1:184\", \"name\": \"10\", \"type\": \"TEXT\", \"characters\": \"10\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:185\", \"name\": \"Group 7\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:186\", \"name\": \"Reveiws / Moblie Stratgey\", \"type\": \"TEXT\", \"characters\": \"Reveiws / Moblie Stratgey\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:187\", \"name\": \"Prodcut reveiw \\u2014 Monht XX\", \"type\": \"TEXT\", \"characters\": \"Prodcut reveiw \\u2014 Monht XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:188\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:189\", \"name\": \"How we'll winn\", \"type\": \"TEXT\", \"characters\": \"How we'll winn\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:190\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:191\", \"name\": \"Group 2\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:192\", \"name\": \"noisy-gradients\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:193\", \"name\": \"Rectangle 15\", \"type\": \"RECTANGLE\"}]}, {\"id\": \"1:194\", \"name\": \"Reveiws / Moblie Stratgey\", \"type\": \"TEXT\", \"characters\": \"Reveiws / Moblie Stratgey\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:195\", \"name\": \"Prodcut reveiw \\u2014 Monht XX\", \"type\": \"TEXT\", \"characters\": \"Prodcut reveiw \\u2014 Monht XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:196\", \"name\": \"11\", \"type\": \"TEXT\", \"characters\": \"11\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:197\", \"name\": \"Header 1\", \"type\": \"TEXT\", \"characters\": \"Design Concepts\", \"style\": {\"fontFamily\": \"Whyte\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 140.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:198\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:199\", \"name\": \"Desgin Concetps\", \"type\": \"TEXT\", \"characters\": \"Desgin Concetps\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:200\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:201\", \"name\": \"iPhone 15 Pro - Black Flatten\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:202\", \"name\": \"Apple iPhone 15 Pro Black Titanium 1\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:203\", \"name\": \"Screen **Insert Designs here**\", \"type\": \"VECTOR\"}]}, {\"id\": \"1:204\", \"name\": \"Frame 22\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:205\", \"name\": \"Apple iPhone 15 Pro Black Titanium 1\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:206\", \"name\": \"Screen **Insert Designs here**\", \"type\": \"VECTOR\"}]}, {\"id\": \"1:207\", \"name\": \"iPhone 15 Pro - Black Flatten\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:208\", \"name\": \"Apple iPhone 15 Pro Black Titanium 1\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:209\", \"name\": \"Screen **Insert Designs here**\", \"type\": \"VECTOR\"}]}, {\"id\": \"1:210\", \"name\": \"iPhone 15 Pro - Black Flatten\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:211\", \"name\": \"Apple iPhone 15 Pro Black Titanium 1\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:212\", \"name\": \"Screen **Insert Designs here**\", \"type\": \"VECTOR\"}]}, {\"id\": \"1:213\", \"name\": \"iPhone 15 Pro - Black Flatten\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:214\", \"name\": \"Apple iPhone 15 Pro Black Titanium 1\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:215\", \"name\": \"Screen **Insert Designs here**\", \"type\": \"VECTOR\"}, {\"id\": \"1:216\", \"name\": \"iPhone 15 Pro - Black Flatten\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:217\", \"name\": \"Apple iPhone 15 Pro Black Titanium 1\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:218\", \"name\": \"Screen **Insert Designs here**\", \"type\": \"VECTOR\"}]}]}, {\"id\": \"1:219\", \"name\": \"iPhone 15 Pro - Black Flatten\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:220\", \"name\": \"Apple iPhone 15 Pro Black Titanium 1\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:221\", \"name\": \"Screen **Insert Designs here**\", \"type\": \"VECTOR\"}]}, {\"id\": \"1:222\", \"name\": \"iPhone 15 Pro - Black Flatten\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:223\", \"name\": \"Apple iPhone 15 Pro Black Titanium 1\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:224\", \"name\": \"Screen **Insert Designs here**\", \"type\": \"VECTOR\"}, {\"id\": \"1:225\", \"name\": \"iPhone 15 Pro - Black Flatten\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:226\", \"name\": \"Apple iPhone 15 Pro Black Titanium 1\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:227\", \"name\": \"Screen **Insert Designs here**\", \"type\": \"VECTOR\"}]}]}, {\"id\": \"1:228\", \"name\": \"iPhone 15 Pro - Black Flatten\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:229\", \"name\": \"Apple iPhone 15 Pro Black Titanium 1\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:230\", \"name\": \"Screen **Insert Designs here**\", \"type\": \"VECTOR\"}]}, {\"id\": \"1:231\", \"name\": \"iPhone 15 Pro - Black Flatten\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:232\", \"name\": \"Apple iPhone 15 Pro Black Titanium 1\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:233\", \"name\": \"Screen **Insert Designs here**\", \"type\": \"VECTOR\"}]}, {\"id\": \"1:234\", \"name\": \"iPhone 15 Pro - Black Flatten\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:235\", \"name\": \"Apple iPhone 15 Pro Black Titanium 1\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:236\", \"name\": \"Screen **Insert Designs here**\", \"type\": \"VECTOR\"}]}, {\"id\": \"1:237\", \"name\": \"iPhone 15 Pro - Black Flatten\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:238\", \"name\": \"Apple iPhone 15 Pro Black Titanium 1\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:239\", \"name\": \"Screen **Insert Designs here**\", \"type\": \"VECTOR\"}]}]}, {\"id\": \"1:240\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:241\", \"name\": \"Header 2\", \"type\": \"TEXT\", \"characters\": \"Seamless sign up\", \"style\": {\"fontFamily\": \"Whyte\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 96.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:242\", \"name\": \"Body 1\", \"type\": \"TEXT\", \"characters\": \"Tell us more about your topik and what poeple can expext. A word or two on your aproach and what makes this topik importent is helpfull for seting context.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:243\", \"name\": \"13\", \"type\": \"TEXT\", \"characters\": \"13\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:244\", \"name\": \"Group 15\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:245\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reviews / Mobile Strategy\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:246\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Product review \\u2014\\u00a0Month XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:247\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:248\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Concpet 1\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:249\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:250\", \"name\": \"Frame 19\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:251\", \"name\": \"Body 2\", \"type\": \"TEXT\", \"characters\": \"Singel-sign on intergration\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Medium\", \"fontWeight\": 500, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:252\", \"name\": \"Body 1\", \"type\": \"TEXT\", \"characters\": \"We'll suport socail logins for easyer acount managment.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:253\", \"name\": \"14\", \"type\": \"TEXT\", \"characters\": \"14\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:254\", \"name\": \"Frame 1\", \"type\": \"FRAME\"}, {\"id\": \"1:255\", \"name\": \"Frame 2\", \"type\": \"FRAME\"}, {\"id\": \"1:256\", \"name\": \"Frame 3\", \"type\": \"FRAME\"}, {\"id\": \"1:257\", \"name\": \"Group 15\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:258\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reviews / Mobile Strategy\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:259\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Product review \\u2014\\u00a0Month XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:260\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:261\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Concpet 1\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:262\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:263\", \"name\": \"Body 3\", \"type\": \"TEXT\", \"characters\": \"Descirbe feture\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:264\", \"name\": \"Body 3\", \"type\": \"TEXT\", \"characters\": \"Descirbe feture\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:265\", \"name\": \"Body 3\", \"type\": \"TEXT\", \"characters\": \"Descirbe feture\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:266\", \"name\": \"Body 3\", \"type\": \"TEXT\", \"characters\": \"Feture 1\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:267\", \"name\": \"Body 3\", \"type\": \"TEXT\", \"characters\": \"Feture 2\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:268\", \"name\": \"Body 3\", \"type\": \"TEXT\", \"characters\": \"Feture 3\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:269\", \"name\": \"Line 1\", \"type\": \"LINE\"}, {\"id\": \"1:270\", \"name\": \"Line 2\", \"type\": \"LINE\"}, {\"id\": \"1:271\", \"name\": \"Line 3\", \"type\": \"LINE\"}, {\"id\": \"1:272\", \"name\": \"Frame 19\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:273\", \"name\": \"Body 2\", \"type\": \"TEXT\", \"characters\": \"Socail logins\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Medium\", \"fontWeight\": 500, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:274\", \"name\": \"Body 1\", \"type\": \"TEXT\", \"characters\": \"Concpet A\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:275\", \"name\": \"15\", \"type\": \"TEXT\", \"characters\": \"15\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:276\", \"name\": \"Frame 22\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:277\", \"name\": \"Apple iPhone 15 Pro Black Titanium 1\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:278\", \"name\": \"Screen **Insert Designs here**\", \"type\": \"VECTOR\"}]}, {\"id\": \"1:279\", \"name\": \"Group 16\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:280\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reviews / Mobile Strategy\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:281\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Product review \\u2014\\u00a0Month XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:282\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:283\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Concpet 1\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:284\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:285\", \"name\": \"Header 2\", \"type\": \"TEXT\", \"characters\": \"Design quality\", \"style\": {\"fontFamily\": \"Whyte\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 96.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:286\", \"name\": \"Body 1\", \"type\": \"TEXT\", \"characters\": \"In order to enhanse the overal desgin quailty, we will adress minor desgin isues. This will involve improveing the forgott password proces and implementing easyer in-prodcut acount suport.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:287\", \"name\": \"16\", \"type\": \"TEXT\", \"characters\": \"16\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:288\", \"name\": \"Group 17\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:289\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reviews / Mobile Strategy\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:290\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Product review \\u2014\\u00a0Month XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:291\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:292\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Concept 2\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:293\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:294\", \"name\": \"Frame 18\", \"type\": \"FRAME\"}, {\"id\": \"1:295\", \"name\": \"Frame 19\", \"type\": \"FRAME\", \"children\": [{\"id\": \"1:296\", \"name\": \"Body 2\", \"type\": \"TEXT\", \"characters\": \"Clearer entrypoitns for pasword retreival\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Medium\", \"fontWeight\": 500, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:297\", \"name\": \"Body 1\", \"type\": \"TEXT\", \"characters\": \"We need to make it easyer for users to find where they can reset thier paswords. This will help improve the overal user experiance and reduce frustation.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}, {\"id\": \"1:298\", \"name\": \"17\", \"type\": \"TEXT\", \"characters\": \"17\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:299\", \"name\": \"Group 18\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:300\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reviews / Mobile Strategy\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:301\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Product review \\u2014\\u00a0Month XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:302\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:303\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Concept 2\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:304\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:305\", \"name\": \"Rectangle 8\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:306\", \"name\": \"18\", \"type\": \"TEXT\", \"characters\": \"18\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:307\", \"name\": \"Group 19\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:308\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reviews / Mobile Strategy\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:309\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Product review \\u2014\\u00a0Month XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:310\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:311\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Concept 2\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:312\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:313\", \"name\": \"Rectangle 8\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:314\", \"name\": \"Rectangle 10\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:315\", \"name\": \"Rectangle 9\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:316\", \"name\": \"Rectangle 11\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:317\", \"name\": \"Rectangle 12\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:318\", \"name\": \"Rectangle 14\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:319\", \"name\": \"Rectangle 13\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:320\", \"name\": \"Body 1\", \"type\": \"TEXT\", \"characters\": \"This layout organizes conent in a visualy apealing and structered maner for easy informaton digstion. Each secton focuses on spesific informaton, ensureing clarity.\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 36.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:321\", \"name\": \"Body 3\", \"type\": \"TEXT\", \"characters\": \"Moduel title\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"CENTER\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:322\", \"name\": \"Body 3\", \"type\": \"TEXT\", \"characters\": \"Moduel title\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"CENTER\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:323\", \"name\": \"Body 3\", \"type\": \"TEXT\", \"characters\": \"Moduel title\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"CENTER\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:324\", \"name\": \"Header 1\", \"type\": \"TEXT\", \"characters\": \"123\", \"style\": {\"fontFamily\": \"Whyte\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 140.0, \"textAlignHorizontal\": \"CENTER\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:325\", \"name\": \"Body 3\", \"type\": \"TEXT\", \"characters\": \"Moduel title\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"CENTER\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:326\", \"name\": \"Body 3\", \"type\": \"TEXT\", \"characters\": \"Moduel title\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 24.0, \"textAlignHorizontal\": \"CENTER\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:327\", \"name\": \"19\", \"type\": \"TEXT\", \"characters\": \"19\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:328\", \"name\": \"Group 20\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:329\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reviews / Mobile Strategy\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:330\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Product review \\u2014\\u00a0Month XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:331\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:332\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Overveiw\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}, {\"id\": \"1:333\", \"name\": \"Frame\", \"type\": \"FRAME\", \"size\": {\"x\": 1920.0, \"y\": 1080.0}, \"children\": [{\"id\": \"1:334\", \"name\": \"Group 2\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:335\", \"name\": \"noisy-gradients\", \"type\": \"RECTANGLE\"}, {\"id\": \"1:336\", \"name\": \"Rectangle 15\", \"type\": \"RECTANGLE\"}]}, {\"id\": \"1:337\", \"name\": \"20\", \"type\": \"TEXT\", \"characters\": \"20\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"RIGHT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:338\", \"name\": \"Header 1\", \"type\": \"TEXT\", \"characters\": \"Q&A\", \"style\": {\"fontFamily\": \"Whyte\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 140.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:339\", \"name\": \"Group 21\", \"type\": \"GROUP\", \"children\": [{\"id\": \"1:340\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Reviews / Mobile Strategy\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:341\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Product review \\u2014\\u00a0Month XX\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}, {\"id\": \"1:342\", \"name\": \"Shape with text\", \"type\": \"SHAPE_WITH_TEXT\"}, {\"id\": \"1:343\", \"name\": \"Note\", \"type\": \"TEXT\", \"characters\": \"Q&A\", \"style\": {\"fontFamily\": \"Inter\", \"fontStyle\": \"Regular\", \"fontWeight\": 400, \"fontSize\": 12.0, \"textAlignHorizontal\": \"LEFT\"}, \"characterStyleOverrides\": []}]}]}]}]}]}}\n```\n\n**Instruction**\nProofread the entire presentation and correct any spelling errors you find.\n\n\n---\nLoaded document structure (use these node IDs in your tool calls):\nRetrieved page structure for \"Page 1\""
+      }
+    ]
+  },
+  {
+    "id": "msg_01AhZbXGCY9aEcZ4YEUDZess",
+    "timestamp": 1780729822269,
+    "type": "agent_request",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "I'll systematically identify all spelling errors across the presentation and correct them in one batch operation.\n\n**Plan:**\n1. Scan all text nodes for spelling errors\n2. Collect all corrections needed\n3. Execute all fixes in a single batch_execute call\n\nHere are all the spelling errors I found:\n- \"Reveiws\" → \"Reviews\", \"Moblie\" → \"Mobile\", \"Stratgey\" → \"Strategy\"\n- \"Prodcut\" → \"Product\", \"reveiw\" → \"review\", \"Monht\" → \"Month\"\n- \"Goels\" → \"Goals\", \"Vison\" → \"Vision\", \"raodmap\" → \"roadmap\"\n- \"quater\" → \"quarter\", \"Reserach\" → \"Research\", \"insihgts\" → \"insights\"\n- \"winn\" → \"win\", \"Desgin\" → \"Design\", \"concetps\" → \"concepts\"\n- \"Seemless\" → \"Seamless\", \"upp\" → \"up\", \"quailty\" → \"quality\"\n- \"Agendaa\" → \"Agenda\", \"Goel\" → \"Goal\", \"feeback\" → \"feedback\"\n- \"fraimng\" → \"framing\", \"Solicit\" → \"Solicit\", \"desgins\" → \"designs\"\n- \"Showcaes\" → \"Showcases\", \"ponit\" → \"point\", \"veiw\" → \"view\"\n- \"succesfull\" → \"successful\", \"prioritzing\" → \"prioritizing\", \"fixng\" → \"fixing\"\n- \"acount\" → \"account\", \"frction\" → \"friction\", \"adressing\" → \"addressing\"\n- \"cutts\" → \"cuts\", \"focussing\" → \"focusing\", \"aeras\" → \"areas\"\n- \"enhanse\" → \"enhance\", \"increse\" → \"increase\", \"custommer\" → \"customer\"\n- \"satisfacton\" → \"satisfaction\", \"beter\" → \"better\", \"bussiness\" → \"business\"\n- \"Divee\" → \"Dive\", \"inovative\" → \"innovative\", \"feautres\" → \"features\"\n- \"enhancemnts\" → \"enhancements\", \"shpae\" → \"shape\", \"experiance\" → \"experience\"\n- \"excede\" → \"exceed\", \"expectatoins\" → \"expectations\", \"Exlpore\" → \"Explore\"\n- \"revoltionize\" → \"revolutionize\", \"peopel\" → \"people\", \"technolgy\" → \"technology\"\n- \"Useres\" → \"Users\", \"dificult\" → \"difficult\", \"logg\" → \"log\"\n- \"thier\" → \"their\", \"acounts\" → \"accounts\", \"Meny\" → \"Many\"\n- \"reportd\" → \"reported\", \"experiancing\" → \"experiencing\", \"chalenges\" → \"challenges\"\n- \"tryng\" → \"trying\", \"frustraton\" → \"frustration\", \"ledd\" → \"led\"\n- \"decrese\" → \"decrease\", \"engagment\" → \"engagement\"\n- \"Prioritze\" → \"Prioritize\", \"Gian\" → \"Gain\", \"acess\" → \"access\"\n- \"personlized\" → \"personalized\", \"recomendations\" → \"recommendations\"\n- \"smoth\" → \"smooth\", \"browising\" → \"browsing\", \"creaton\" → \"creation\"\n- \"isues\" → \"issues\", \"Singel\" → \"Single\", \"intergration\" → \"integration\"\n- \"suport\" → \"support\", \"socail\" → \"social\", \"logins\" → \"logins\", \"easyer\" → \"easier\"\n- \"managment\" → \"management\", \"Concpet\" → \"Concept\"\n- \"Descirbe\" → \"Describe\", \"feture\" → \"feature\", \"Feture\" → \"Feature\"\n- \"Socail\" → \"Social\", \"topik\" → \"topic\", \"poeple\" → \"people\"\n- \"expext\" → \"expect\", \"aproach\" → \"approach\", \"importent\" → \"important\"\n- \"helpfull\" → \"helpful\", \"seting\" → \"setting\"\n- \"Clearer\" → \"Clearer\", \"entrypoitns\" → \"entrypoints\", \"pasword\" → \"password\"\n- \"retreival\" → \"retrieval\", \"easyer\" → \"easier\", \"thier\" → \"their\"\n- \"paswords\" → \"passwords\", \"overal\" → \"overall\", \"frustation\" → \"frustration\"\n- \"improveing\" → \"improving\", \"forgott\" → \"forgot\", \"proces\" → \"process\"\n- \"implementing\" → \"implementing\", \"in-prodcut\" → \"in-product\"\n- \"conent\" → \"content\", \"visualy\" → \"visually\", \"apealing\" → \"appealing\"\n- \"structered\" → \"structured\", \"informaton\" → \"information\", \"digstion\" → \"digestion\"\n- \"secton\" → \"section\", \"spesific\" → \"specific\", \"ensureing\" → \"ensuring\"\n- \"Moduel\" → \"Module\", \"Overveiw\" → \"Overview\"\n- \"Concetps\" → \"Concepts\", \"Moblie stratgey\" → \"Mobile strategy\""
+      }
+    ],
+    "calls": [
+      {
+        "id": "toolu_01XRebnwwsLTpWSxEV5Lm5H3",
+        "call_id": "",
+        "name": "batch_execute",
+        "arguments": {
+          "operations": [
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:45",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:46",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:48",
+                "text": "Mobile Strategy\nReview"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:53",
+                "text": "Goals"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:57",
+                "text": "Vision for the Mobile roadmap"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:60",
+                "text": "Goals for the quarter"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:64",
+                "text": "Mobile strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:68",
+                "text": "Research insights"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:71",
+                "text": "How we'll win"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:75",
+                "text": "Design concepts"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:79",
+                "text": "Seamless sign up"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:82",
+                "text": "Design quality"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:92",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:93",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:94",
+                "text": "Agenda"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:103",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:104",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:106",
+                "text": "Goals"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:108",
+                "text": "Vision for the Mobile roadmap"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:109",
+                "text": "Dive into the innovative features and enhancements that will shape the user experience and exceed expectations. Explore the vision that will revolutionize the way people interact with mobile technology."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:112",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:113",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:115",
+                "text": "Vision"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:118",
+                "text": "Goal 2"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:119",
+                "text": "Get feedback on framing"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:121",
+                "text": "Goal 3"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:122",
+                "text": "Solicit feedback for designs"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:126",
+                "text": "Goal 1"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:127",
+                "text": "Showcase our point of view"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:131",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:132",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:134",
+                "text": "Q3 Goals"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:142",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:143",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:145",
+                "text": "Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:147",
+                "text": "Research insights"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:148",
+                "text": "For a successful Q3 roadmap strategy, we recommend prioritizing fixing account sign up friction and addressing design paper cuts. By focusing on these areas, you can enhance user experience, increase customer satisfaction, and drive better results for your business."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:153",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:154",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:156",
+                "text": "Research insights"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:160",
+                "text": "Users found it difficult to log back into their accounts"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:161",
+                "text": "Many users reported experiencing challenges when trying to log back into their accounts. This issue caused frustration and led to a decrease in user engagement."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:164",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:165",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:167",
+                "text": "Research insights"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:169",
+                "text": "How we'll win"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:170",
+                "text": "For a successful Q3 roadmap strategy, we recommend prioritizing fixing account sign up friction and addressing design paper cuts. By focusing on these areas, you can enhance user experience, increase customer satisfaction, and drive better results for your business."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:173",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:174",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:176",
+                "text": "How we'll win"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:179",
+                "text": "Prioritize account sign up"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:180",
+                "text": "Gain access to personalized recommendations and a smooth browsing experience by fixing account creation issues."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:186",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:187",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:189",
+                "text": "How we'll win"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:194",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:195",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:197",
+                "text": "Design Concepts"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:199",
+                "text": "Design Concepts"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:241",
+                "text": "Seamless sign up"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:242",
+                "text": "Tell us more about your topic and what people can expect. A word or two on your approach and what makes this topic important is helpful for setting context."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:248",
+                "text": "Concept 1"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:251",
+                "text": "Single-sign on integration"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:252",
+                "text": "We'll support social logins for easier account management."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:261",
+                "text": "Concept 1"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:263",
+                "text": "Describe feature"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:264",
+                "text": "Describe feature"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:265",
+                "text": "Describe feature"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:266",
+                "text": "Feature 1"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:267",
+                "text": "Feature 2"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:268",
+                "text": "Feature 3"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:273",
+                "text": "Social logins"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:274",
+                "text": "Concept A"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:280",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:281",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:283",
+                "text": "Concept 1"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:285",
+                "text": "Design quality"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:286",
+                "text": "In order to enhance the overall design quality, we will address minor design issues. This will involve improving the forgot password process and implementing easier in-product account support."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:292",
+                "text": "Concept 2"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:296",
+                "text": "Clearer entrypoints for password retrieval"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:297",
+                "text": "We need to make it easier for users to find where they can reset their passwords. This will help improve the overall user experience and reduce frustration."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:303",
+                "text": "Concept 2"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:311",
+                "text": "Concept 2"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:320",
+                "text": "This layout organizes content in a visually appealing and structured manner for easy information digestion. Each section focuses on specific information, ensuring clarity."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:321",
+                "text": "Module title"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:322",
+                "text": "Module title"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:323",
+                "text": "Module title"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:325",
+                "text": "Module title"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:326",
+                "text": "Module title"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:332",
+                "text": "Overview"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "params": {
+                "nodeId": "1:343",
+                "text": "Q&A"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "25036290-f50d-43b8-8e4e-10a1364a8cbf",
+    "timestamp": 1780729823393,
+    "role": "tool",
+    "type": "tool_response",
+    "content": [
+      {
+        "type": "text",
+        "text": "Batch executed 91 operations: 91/91 succeeded\n{\n  \"results\": [\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:443\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:444\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:447\",\n        \"text\": \"Mobile Strategy\\nReview\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:452\",\n        \"text\": \"Goals\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:456\",\n        \"text\": \"Vision for the Mobile roadmap\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:459\",\n        \"text\": \"Goals for the quarter\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:464\",\n        \"text\": \"Mobile strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:468\",\n        \"text\": \"Research insights\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:471\",\n        \"text\": \"How we'll win\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:475\",\n        \"text\": \"Design concepts\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:479\",\n        \"text\": \"Seamless sign up\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:482\",\n        \"text\": \"Design quality\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:492\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:493\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:494\",\n        \"text\": \"Agenda\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:506\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:507\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:509\",\n        \"text\": \"Goals\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:512\",\n        \"text\": \"Vision for the Mobile roadmap\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:514\",\n        \"text\": \"Dive into the innovative features and enhancements that will shape the user experience and exceed expectations. Explore the vision that will revolutionize the way people interact with mobile technology.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:517\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:518\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:520\",\n        \"text\": \"Vision\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:524\",\n        \"text\": \"Goal 2\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:526\",\n        \"text\": \"Get feedback on framing\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:528\",\n        \"text\": \"Goal 3\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:529\",\n        \"text\": \"Solicit feedback for designs\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:533\",\n        \"text\": \"Goal 1\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:534\",\n        \"text\": \"Showcase our point of view\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:538\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:539\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:541\",\n        \"text\": \"Q3 Goals\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:552\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:553\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:555\",\n        \"text\": \"Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:558\",\n        \"text\": \"Research insights\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:560\",\n        \"text\": \"For a successful Q3 roadmap strategy, we recommend prioritizing fixing account sign up friction and addressing design paper cuts. By focusing on these areas, you can enhance user experience, increase customer satisfaction, and drive better results for your business.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:565\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:566\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:568\",\n        \"text\": \"Research insights\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:575\",\n        \"text\": \"Users found it difficult to log back into their accounts\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:577\",\n        \"text\": \"Many users reported experiencing challenges when trying to log back into their accounts. This issue caused frustration and led to a decrease in user engagement.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:580\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:581\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:583\",\n        \"text\": \"Research insights\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:586\",\n        \"text\": \"How we'll win\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:588\",\n        \"text\": \"For a successful Q3 roadmap strategy, we recommend prioritizing fixing account sign up friction and addressing design paper cuts. By focusing on these areas, you can enhance user experience, increase customer satisfaction, and drive better results for your business.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:591\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:592\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:594\",\n        \"text\": \"How we'll win\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:598\",\n        \"text\": \"Prioritize account sign up\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:600\",\n        \"text\": \"Gain access to personalized recommendations and a smooth browsing experience by fixing account creation issues.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:606\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:607\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:609\",\n        \"text\": \"How we'll win\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:616\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:618\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:620\",\n        \"text\": \"Design Concepts\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:622\",\n        \"text\": \"Design Concepts\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:664\",\n        \"text\": \"Seamless sign up\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:667\",\n        \"text\": \"Tell us more about your topic and what people can expect. A word or two on your approach and what makes this topic important is helpful for setting context.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:673\",\n        \"text\": \"Concept 1\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:677\",\n        \"text\": \"Single-sign on integration\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:679\",\n        \"text\": \"We'll support social logins for easier account management.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:688\",\n        \"text\": \"Concept 1\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:691\",\n        \"text\": \"Describe feature\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:693\",\n        \"text\": \"Describe feature\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:694\",\n        \"text\": \"Describe feature\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:695\",\n        \"text\": \"Feature 1\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:696\",\n        \"text\": \"Feature 2\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:697\",\n        \"text\": \"Feature 3\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:702\",\n        \"text\": \"Social logins\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:703\",\n        \"text\": \"Concept A\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:709\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:710\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:712\",\n        \"text\": \"Concept 1\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:715\",\n        \"text\": \"Design quality\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:717\",\n        \"text\": \"In order to enhance the overall design quality, we will address minor design issues. This will involve improving the forgot password process and implementing easier in-product account support.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:723\",\n        \"text\": \"Concept 2\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:728\",\n        \"text\": \"Clearer entrypoints for password retrieval\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:730\",\n        \"text\": \"We need to make it easier for users to find where they can reset their passwords. This will help improve the overall user experience and reduce frustration.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:736\",\n        \"text\": \"Concept 2\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:746\",\n        \"text\": \"Concept 2\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:756\",\n        \"text\": \"This layout organizes content in a visually appealing and structured manner for easy information digestion. Each section focuses on specific information, ensuring clarity.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:758\",\n        \"text\": \"Module title\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:759\",\n        \"text\": \"Module title\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:760\",\n        \"text\": \"Module title\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:762\",\n        \"text\": \"Module title\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:763\",\n        \"text\": \"Module title\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:769\",\n        \"text\": \"Overview\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:783\",\n        \"text\": \"Q&A\"\n      }\n    }\n  ],\n  \"total\": 91,\n  \"succeeded\": 91\n}"
+      }
+    ],
+    "results": [
+      {
+        "id": "toolu_01XRebnwwsLTpWSxEV5Lm5H3",
+        "call_id": "",
+        "name": "batch_execute",
+        "content": [
+          {
+            "type": "text",
+            "text": "Batch executed 91 operations: 91/91 succeeded"
+          },
+          {
+            "type": "text",
+            "text": "{\n  \"results\": [\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:443\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:444\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:447\",\n        \"text\": \"Mobile Strategy\\nReview\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:452\",\n        \"text\": \"Goals\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:456\",\n        \"text\": \"Vision for the Mobile roadmap\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:459\",\n        \"text\": \"Goals for the quarter\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:464\",\n        \"text\": \"Mobile strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:468\",\n        \"text\": \"Research insights\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:471\",\n        \"text\": \"How we'll win\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:475\",\n        \"text\": \"Design concepts\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:479\",\n        \"text\": \"Seamless sign up\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:482\",\n        \"text\": \"Design quality\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:492\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:493\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:494\",\n        \"text\": \"Agenda\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:506\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:507\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:509\",\n        \"text\": \"Goals\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:512\",\n        \"text\": \"Vision for the Mobile roadmap\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:514\",\n        \"text\": \"Dive into the innovative features and enhancements that will shape the user experience and exceed expectations. Explore the vision that will revolutionize the way people interact with mobile technology.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:517\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:518\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:520\",\n        \"text\": \"Vision\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:524\",\n        \"text\": \"Goal 2\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:526\",\n        \"text\": \"Get feedback on framing\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:528\",\n        \"text\": \"Goal 3\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:529\",\n        \"text\": \"Solicit feedback for designs\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:533\",\n        \"text\": \"Goal 1\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:534\",\n        \"text\": \"Showcase our point of view\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:538\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:539\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:541\",\n        \"text\": \"Q3 Goals\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:552\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:553\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:555\",\n        \"text\": \"Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:558\",\n        \"text\": \"Research insights\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:560\",\n        \"text\": \"For a successful Q3 roadmap strategy, we recommend prioritizing fixing account sign up friction and addressing design paper cuts. By focusing on these areas, you can enhance user experience, increase customer satisfaction, and drive better results for your business.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:565\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:566\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:568\",\n        \"text\": \"Research insights\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:575\",\n        \"text\": \"Users found it difficult to log back into their accounts\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:577\",\n        \"text\": \"Many users reported experiencing challenges when trying to log back into their accounts. This issue caused frustration and led to a decrease in user engagement.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:580\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:581\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:583\",\n        \"text\": \"Research insights\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:586\",\n        \"text\": \"How we'll win\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:588\",\n        \"text\": \"For a successful Q3 roadmap strategy, we recommend prioritizing fixing account sign up friction and addressing design paper cuts. By focusing on these areas, you can enhance user experience, increase customer satisfaction, and drive better results for your business.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:591\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:592\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:594\",\n        \"text\": \"How we'll win\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:598\",\n        \"text\": \"Prioritize account sign up\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:600\",\n        \"text\": \"Gain access to personalized recommendations and a smooth browsing experience by fixing account creation issues.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:606\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:607\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:609\",\n        \"text\": \"How we'll win\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:616\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:618\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:620\",\n        \"text\": \"Design Concepts\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:622\",\n        \"text\": \"Design Concepts\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:664\",\n        \"text\": \"Seamless sign up\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:667\",\n        \"text\": \"Tell us more about your topic and what people can expect. A word or two on your approach and what makes this topic important is helpful for setting context.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:673\",\n        \"text\": \"Concept 1\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:677\",\n        \"text\": \"Single-sign on integration\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:679\",\n        \"text\": \"We'll support social logins for easier account management.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:688\",\n        \"text\": \"Concept 1\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:691\",\n        \"text\": \"Describe feature\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:693\",\n        \"text\": \"Describe feature\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:694\",\n        \"text\": \"Describe feature\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:695\",\n        \"text\": \"Feature 1\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:696\",\n        \"text\": \"Feature 2\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:697\",\n        \"text\": \"Feature 3\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:702\",\n        \"text\": \"Social logins\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:703\",\n        \"text\": \"Concept A\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:709\",\n        \"text\": \"Reviews / Mobile Strategy\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:710\",\n        \"text\": \"Product review — Month XX\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:712\",\n        \"text\": \"Concept 1\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:715\",\n        \"text\": \"Design quality\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:717\",\n        \"text\": \"In order to enhance the overall design quality, we will address minor design issues. This will involve improving the forgot password process and implementing easier in-product account support.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:723\",\n        \"text\": \"Concept 2\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:728\",\n        \"text\": \"Clearer entrypoints for password retrieval\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:730\",\n        \"text\": \"We need to make it easier for users to find where they can reset their passwords. This will help improve the overall user experience and reduce frustration.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:736\",\n        \"text\": \"Concept 2\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:746\",\n        \"text\": \"Concept 2\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:756\",\n        \"text\": \"This layout organizes content in a visually appealing and structured manner for easy information digestion. Each section focuses on specific information, ensuring clarity.\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:758\",\n        \"text\": \"Module title\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:759\",\n        \"text\": \"Module title\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:760\",\n        \"text\": \"Module title\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:762\",\n        \"text\": \"Module title\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:763\",\n        \"text\": \"Module title\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:769\",\n        \"text\": \"Overview\"\n      }\n    },\n    {\n      \"command\": \"set_text_content\",\n      \"success\": true,\n      \"result\": {\n        \"id\": \"1:783\",\n        \"text\": \"Q&A\"\n      }\n    }\n  ],\n  \"total\": 91,\n  \"succeeded\": 91\n}"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "results": [
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:443",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:444",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:447",
+                "text": "Mobile Strategy\nReview"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:452",
+                "text": "Goals"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:456",
+                "text": "Vision for the Mobile roadmap"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:459",
+                "text": "Goals for the quarter"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:464",
+                "text": "Mobile strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:468",
+                "text": "Research insights"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:471",
+                "text": "How we'll win"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:475",
+                "text": "Design concepts"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:479",
+                "text": "Seamless sign up"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:482",
+                "text": "Design quality"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:492",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:493",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:494",
+                "text": "Agenda"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:506",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:507",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:509",
+                "text": "Goals"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:512",
+                "text": "Vision for the Mobile roadmap"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:514",
+                "text": "Dive into the innovative features and enhancements that will shape the user experience and exceed expectations. Explore the vision that will revolutionize the way people interact with mobile technology."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:517",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:518",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:520",
+                "text": "Vision"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:524",
+                "text": "Goal 2"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:526",
+                "text": "Get feedback on framing"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:528",
+                "text": "Goal 3"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:529",
+                "text": "Solicit feedback for designs"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:533",
+                "text": "Goal 1"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:534",
+                "text": "Showcase our point of view"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:538",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:539",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:541",
+                "text": "Q3 Goals"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:552",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:553",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:555",
+                "text": "Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:558",
+                "text": "Research insights"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:560",
+                "text": "For a successful Q3 roadmap strategy, we recommend prioritizing fixing account sign up friction and addressing design paper cuts. By focusing on these areas, you can enhance user experience, increase customer satisfaction, and drive better results for your business."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:565",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:566",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:568",
+                "text": "Research insights"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:575",
+                "text": "Users found it difficult to log back into their accounts"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:577",
+                "text": "Many users reported experiencing challenges when trying to log back into their accounts. This issue caused frustration and led to a decrease in user engagement."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:580",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:581",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:583",
+                "text": "Research insights"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:586",
+                "text": "How we'll win"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:588",
+                "text": "For a successful Q3 roadmap strategy, we recommend prioritizing fixing account sign up friction and addressing design paper cuts. By focusing on these areas, you can enhance user experience, increase customer satisfaction, and drive better results for your business."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:591",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:592",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:594",
+                "text": "How we'll win"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:598",
+                "text": "Prioritize account sign up"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:600",
+                "text": "Gain access to personalized recommendations and a smooth browsing experience by fixing account creation issues."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:606",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:607",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:609",
+                "text": "How we'll win"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:616",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:618",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:620",
+                "text": "Design Concepts"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:622",
+                "text": "Design Concepts"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:664",
+                "text": "Seamless sign up"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:667",
+                "text": "Tell us more about your topic and what people can expect. A word or two on your approach and what makes this topic important is helpful for setting context."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:673",
+                "text": "Concept 1"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:677",
+                "text": "Single-sign on integration"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:679",
+                "text": "We'll support social logins for easier account management."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:688",
+                "text": "Concept 1"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:691",
+                "text": "Describe feature"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:693",
+                "text": "Describe feature"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:694",
+                "text": "Describe feature"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:695",
+                "text": "Feature 1"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:696",
+                "text": "Feature 2"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:697",
+                "text": "Feature 3"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:702",
+                "text": "Social logins"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:703",
+                "text": "Concept A"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:709",
+                "text": "Reviews / Mobile Strategy"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:710",
+                "text": "Product review — Month XX"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:712",
+                "text": "Concept 1"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:715",
+                "text": "Design quality"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:717",
+                "text": "In order to enhance the overall design quality, we will address minor design issues. This will involve improving the forgot password process and implementing easier in-product account support."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:723",
+                "text": "Concept 2"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:728",
+                "text": "Clearer entrypoints for password retrieval"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:730",
+                "text": "We need to make it easier for users to find where they can reset their passwords. This will help improve the overall user experience and reduce frustration."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:736",
+                "text": "Concept 2"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:746",
+                "text": "Concept 2"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:756",
+                "text": "This layout organizes content in a visually appealing and structured manner for easy information digestion. Each section focuses on specific information, ensuring clarity."
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:758",
+                "text": "Module title"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:759",
+                "text": "Module title"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:760",
+                "text": "Module title"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:762",
+                "text": "Module title"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:763",
+                "text": "Module title"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:769",
+                "text": "Overview"
+              }
+            },
+            {
+              "command": "set_text_content",
+              "success": true,
+              "result": {
+                "id": "1:783",
+                "text": "Q&A"
+              }
+            }
+          ],
+          "total": 91,
+          "succeeded": 91
+        }
+      }
+    ]
+  },
+  {
+    "id": "msg_01EwvkZxmYeKY68zdfTsRUmb",
+    "timestamp": 1780729835637,
+    "type": "agent_request",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "All **91 spelling corrections** were applied successfully across the entire presentation in a single batch. Here's a summary of the key fixes made:\n\n**Recurring corrections throughout all slides:**\n- \"Reveiws\" → \"Reviews\", \"Moblie\" → \"Mobile\", \"Stratgey\" → \"Strategy\"\n- \"Prodcut\" → \"Product\", \"Monht\" → \"Month\"\n\n**Slide-specific content fixes:**\n- **Agenda:** \"Goels\" → \"Goals\", \"Agendaa\" → \"Agenda\", \"winn\" → \"win\", \"Seemless\" → \"Seamless\", \"Desgin concetps\" → \"Design concepts\", \"quailty\" → \"quality\"\n- **Vision slide:** \"Divee\" → \"Dive\", \"inovative\" → \"innovative\", \"feautres\" → \"features\", \"shpae\" → \"shape\", \"experiance\" → \"experience\", \"revoltionize\" → \"revolutionize\", \"technolgy\" → \"technology\"\n- **Goals slide:** \"Goel\" → \"Goal\", \"feeback\" → \"feedback\", \"fraimng\" → \"framing\", \"Showcaes\" → \"Showcases\", \"ponit\" → \"point\", \"veiw\" → \"view\"\n- **Research/Strategy slides:** \"succesfull\" → \"successful\", \"raodmap\" → \"roadmap\", \"prioritzing\" → \"prioritizing\", \"acount\" → \"account\", \"frction\" → \"friction\", \"bussiness\" → \"business\"\n- **Research insights detail:** \"Useres\" → \"Users\", \"dificult\" → \"difficult\", \"chalenges\" → \"challenges\", \"frustraton\" → \"frustration\"\n- **Design slides:** \"Singel\" → \"Single\", \"intergration\" → \"integration\", \"socail\" → \"Social\", \"easyer\" → \"easier\", \"Descirbe feture\" → \"Describe feature\", \"Feture\" → \"Feature\"\n- **Design quality:** \"enhanse\" → \"enhance\", \"overal\" → \"overall\", \"forgott\" → \"forgot\", \"proces\" → \"process\"\n- **Overview slide:** \"conent\" → \"content\", \"visualy\" → \"visually\", \"apealing\" → \"appealing\", \"structered\" → \"structured\", \"digstion\" → \"digestion\", \"spesific\" → \"specific\", \"ensureing\" → \"ensuring\", \"Moduel\" → \"Module\", \"Overveiw\" → \"Overview\""
+      }
+    ],
+    "calls": []
+  }
+]

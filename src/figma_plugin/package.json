@@ -1,0 +1,19 @@
+{
+  "name": "figma-slides-mcp-plugin",
+  "version": "1.0.0",
+  "description": "Figma Slides Plugin for MCP integration",
+  "main": "dist/code.js",
+  "scripts": {
+    "build": "esbuild src/code.ts --bundle --outfile=dist/code.js --target=es6 && cp src/ui.html dist/ui.html && sed 's|dist/||g' manifest.json > dist/manifest.json",
+    "watch": "esbuild src/code.ts --bundle --outfile=dist/code.js --target=es6 --watch",
+    "dev": "npm run build && npm run watch"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.98.0",
+    "esbuild": "^0.28.1",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1"
+  }
+}

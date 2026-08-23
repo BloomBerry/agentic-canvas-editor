@@ -1,0 +1,37 @@
+# --- OS / editor ---
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# --- Node ---
+node_modules/
+npm-debug.log*
+yarn-error.log*
+# Source maps are build noise (dist/ compiled output is kept so the plugin loads).
+*.map
+
+# --- Secrets / local config ---
+config.env
+.env
+*.local
+
+# --- Large artifacts NOT bundled (see README scope) ---
+# Benchmark decks / inputs are large and contain third-party slide content.
+data/
+# Per-run model outputs / snapshots.
+results/
+
+# --- Backups ---
+*.bak
+*.bak_*
+*_bak_*

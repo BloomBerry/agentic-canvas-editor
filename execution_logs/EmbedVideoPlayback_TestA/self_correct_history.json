@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 99: Embed & Configure Video Playback",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.148,
+    "input_tokens": 1290,
+    "output_tokens": 77,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000639,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 771,
+        "output_tokens": 44,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.999744176864624
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 519,
+        "output_tokens": 33,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.1480038166046143
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.184813,
+    "if_judge_cost": 0.010704,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000639,
+    "total_cost": 0.196156
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent removed the slide 3 placeholder rectangle and replaced it in the same area with an embedded, relevant renewable-energy image, with no meaningful unrelated edits.",
+      "prompt": "On slide 3, replace the placeholder box with the related image file. The image should be embedded.",
+      "inference_sec": 26.243791818618774,
+      "judge_sec": 13.013349056243896,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 10117,
+          "output_tokens": 934,
+          "cache_read_input_tokens": 175722,
+          "cache_creation_5m": 23396,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.184813,
+          "n_responses": 5,
+          "elapsed_sec": 26.244
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 13.013,
+          "input_tokens": 4987,
+          "output_tokens": 447,
+          "reasoning_tokens": 396,
+          "cost_usd": 0.010704,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 111: FillTablefromDataWithHighlighting4thRow",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.382,
+    "input_tokens": 1380,
+    "output_tokens": 86,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.00069,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 816,
+        "output_tokens": 42,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.060546636581421
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 564,
+        "output_tokens": 44,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.3211557865142822
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.1626,
+    "if_judge_cost": 0.01583,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.00069,
+    "total_cost": 0.17912
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent correctly filled Slide 7\u2019s empty table with all five rows of data from the original text box, deleted that source text box, and highlighted the 4th body row with a gray fill consistent with #BBBBBB without unrelated edits.",
+      "prompt": "In Slide 7, Take the data from the text box and use it to fill in the empty table below it. Then, delete the original text box. Highlight the 4th row using different color \"BBBBBB\"",
+      "inference_sec": 32.82079195976257,
+      "judge_sec": 18.1842679977417,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 3185,
+          "output_tokens": 1523,
+          "cache_read_input_tokens": 129289,
+          "cache_creation_5m": 24377,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.1626,
+          "n_responses": 3,
+          "elapsed_sec": 32.821
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 18.184,
+          "input_tokens": 10792,
+          "output_tokens": 234,
+          "reasoning_tokens": 165,
+          "cost_usd": 0.01583,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

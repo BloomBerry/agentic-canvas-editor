@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 12: Stock Photo Cleanup ",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.964,
+    "input_tokens": 1298,
+    "output_tokens": 83,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000652,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 775,
+        "output_tokens": 42,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.462453842163086
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 523,
+        "output_tokens": 41,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.5019750595092773
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.160928,
+    "if_judge_cost": 0.007783,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000652,
+    "total_cost": 0.169363
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent arranged all three images into a clean three-panel gallery layout and added visible descriptive caption overlays directly on each photo with appropriate titles and body text.",
+      "prompt": "Clean up the images into a sleek panel gallery layout. Add a visible caption onto each picture that describes each photo.",
+      "inference_sec": 56.845582723617554,
+      "judge_sec": 5.687128067016602,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 7562,
+          "output_tokens": 2601,
+          "cache_read_input_tokens": 201230,
+          "cache_creation_5m": 10362,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.160928,
+          "n_responses": 6,
+          "elapsed_sec": 56.846
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 5.687,
+          "input_tokens": 4882,
+          "output_tokens": 168,
+          "reasoning_tokens": 118,
+          "cost_usd": 0.007783,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

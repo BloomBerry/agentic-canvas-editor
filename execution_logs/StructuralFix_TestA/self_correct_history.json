@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 35: Structural Fix",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 3.308,
+    "input_tokens": 1432,
+    "output_tokens": 93,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000722,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 590,
+        "output_tokens": 32,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.117677927017212
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 842,
+        "output_tokens": 61,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 2.1904447078704834
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.192729,
+    "if_judge_cost": 0.020962,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000722,
+    "total_cost": 0.21441300000000002
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent shortened slide 2 body text into markdown-style bullets/emphasis, kept the title split into separate 'Hi, I\u2019m' and 'Hannah Ung' text elements while setting 'Hannah Ung' to 96pt, and changed all text on slides 3\u20135 from Fira Code to Inter without unrelated edits.",
+      "prompt": "On slide 2, shorten the content into markdown format. Split the title text content into two text elements, and change the font size of the text 'Hannah Ung' to 96pt. Also, change font style from slide 3 ~ 5 into inter format.",
+      "inference_sec": 58.673996925354004,
+      "judge_sec": 23.01726794242859,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 1824,
+          "output_tokens": 1059,
+          "cache_read_input_tokens": 95801,
+          "cache_creation_5m": 38035,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.192729,
+          "n_responses": 2,
+          "elapsed_sec": 58.674
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 23.017,
+          "input_tokens": 9522,
+          "output_tokens": 906,
+          "reasoning_tokens": 819,
+          "cost_usd": 0.020962,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

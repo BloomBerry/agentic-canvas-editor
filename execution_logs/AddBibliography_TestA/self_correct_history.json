@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 83: Bibliography Slide from Footers",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.594,
+    "input_tokens": 1370,
+    "output_tokens": 113,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000729,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 559,
+        "output_tokens": 35,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.1476411819458008
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 811,
+        "output_tokens": 78,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.4464361667633057
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.166757,
+    "if_judge_cost": 0.009935,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000729,
+    "total_cost": 0.177421
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent added a final Sources slide containing exactly the four unique bottom-of-slide citations from the deck, with duplicates removed and ordered alphabetically by full URL, with no unrelated edits.",
+      "prompt": "Find all the source citations from the bottom of my slides, and create a new 'Source' slide in the final slide. The new slide should list all unique sources, alphabetized.",
+      "inference_sec": 36.625954151153564,
+      "judge_sec": 12.851157903671265,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 7519,
+          "output_tokens": 1476,
+          "cache_read_input_tokens": 258091,
+          "cache_creation_5m": 11902,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.166757,
+          "n_responses": 7,
+          "elapsed_sec": 36.626
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 12.851,
+          "input_tokens": 3868,
+          "output_tokens": 510,
+          "reasoning_tokens": 454,
+          "cost_usd": 0.009935,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

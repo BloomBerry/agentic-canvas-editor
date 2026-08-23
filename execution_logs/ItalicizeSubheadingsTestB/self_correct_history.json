@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 11: Italicize Subheadings (B)",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 4.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 5.548,
+    "input_tokens": 1582,
+    "output_tokens": 80,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000761,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 917,
+        "output_tokens": 41,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.9721431732177734
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 665,
+        "output_tokens": 39,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 4.576077222824097
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.280507,
+    "if_judge_cost": 0.03488,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000761,
+    "total_cost": 0.31614800000000004
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 4.0,
+      "IF_reason": "The agent correctly italicized all text on slides 2\u201316 and left slide 1 and slides 17+ unchanged, with only minor incidental bounding-box height changes on slide 13 beyond the requested style change.",
+      "prompt": "Apply an italic style to all text in this presentation, but do not change the main title slide (slide 1) or slide number bigger than 16.",
+      "inference_sec": 72.41612315177917,
+      "judge_sec": 18.690630197525024,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 17450,
+          "output_tokens": 4684,
+          "cache_read_input_tokens": 92474,
+          "cache_creation_5m": 34708,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.280507,
+          "n_responses": 2,
+          "elapsed_sec": 72.416
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 18.691,
+          "input_tokens": 23272,
+          "output_tokens": 579,
+          "reasoning_tokens": 516,
+          "cost_usd": 0.03488,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

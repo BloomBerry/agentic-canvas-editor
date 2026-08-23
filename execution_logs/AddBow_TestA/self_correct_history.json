@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 52: Add Source",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 1.885,
+    "input_tokens": 1364,
+    "output_tokens": 85,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000682,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 808,
+        "output_tokens": 41,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.8080868721008301
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 556,
+        "output_tokens": 44,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.0765478610992432
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 5.643886,
+    "if_judge_cost": 0.016497,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000682,
+    "total_cost": 5.661065000000001
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent added the exact requested text under \u201cPeople\u2019s politeness\u201d on slide 9 and positioned it aligned with the adjacent body text, with only necessary resizing/repositioning of that text frame and no unrelated edits.",
+      "prompt": "In the text box at the bottom of the slide, under 'PEOPLE POLITENCE', add the text 'People bow instead of shaking hands' and align with the next text.",
+      "inference_sec": 111.2030439376831,
+      "judge_sec": 13.210287094116211,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 1027910,
+          "output_tokens": 2265,
+          "cache_read_input_tokens": 1838603,
+          "cache_creation_5m": 526560,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 5.643886,
+          "n_responses": 10,
+          "elapsed_sec": 111.203
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 13.21,
+          "input_tokens": 9550,
+          "output_tokens": 456,
+          "reasoning_tokens": 392,
+          "cost_usd": 0.016497,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

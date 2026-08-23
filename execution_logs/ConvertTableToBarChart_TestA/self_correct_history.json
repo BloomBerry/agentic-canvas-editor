@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 108: ConvertTableToBarChart",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 4.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.931,
+    "input_tokens": 1344,
+    "output_tokens": 88,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000678,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 546,
+        "output_tokens": 37,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.3617908954620361
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 798,
+        "output_tokens": 51,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.5688509941101074
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.272015,
+    "if_judge_cost": 0.020141,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000678,
+    "total_cost": 0.29283400000000004
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 4.0,
+      "IF_reason": "The agent removed the slide 2 table and replaced it with a bar chart using the table\u2019s year/value data, and added a custom legend frame on the right; however, the resulting chart/legend are labeled as market value in $ billions rather than uninsured rates, so the requested subject is not matched exactly.",
+      "prompt": "On slide 2, convert the table data showing uninsured rates into a bar chart. Also, create a custom legend for the chart on the right.",
+      "inference_sec": 65.90819787979126,
+      "judge_sec": 16.751070022583008,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 8052,
+          "output_tokens": 2930,
+          "cache_read_input_tokens": 348758,
+          "cache_creation_5m": 26475,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.272015,
+          "n_responses": 7,
+          "elapsed_sec": 65.908
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 16.751,
+          "input_tokens": 11329,
+          "output_tokens": 598,
+          "reasoning_tokens": 516,
+          "cost_usd": 0.020141,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

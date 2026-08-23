@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Figma Slides MCP</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, sans-serif;
+        font-size: 12px;
+        background: #ffffff;
+      }
+      h2 {
+        margin: 0 0 12px 0;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .status {
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        font-size: 11px;
+      }
+      .status.disconnected {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fee2e2;
+      }
+      .status.connected {
+        background: #f0fdf4;
+        color: #166534;
+        border: 1px solid #dcfce7;
+      }
+      .status.connecting {
+        background: #fffbeb;
+        color: #92400e;
+        border: 1px solid #fef3c7;
+      }
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      input,
+      select,
+      button {
+        padding: 8px;
+        border: 1px solid #e5e5e5;
+        border-radius: 4px;
+        font-size: 11px;
+        font-family: inherit;
+      }
+      button {
+        background: #18a0fb;
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-weight: 500;
+      }
+      button:hover {
+        background: #0d8adf;
+      }
+      button:disabled {
+        background: #e5e5e5;
+        color: #a3a3a3;
+        cursor: not-allowed;
+      }
+      .info {
+        margin-top: 16px;
+        padding: 12px;
+        background: #f9fafb;
+        border-radius: 4px;
+        font-size: 10px;
+        color: #6b7280;
+      }
+      .channel-select {
+        margin-bottom: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Figma Slides MCP</h2>
+
+    <div id="status" class="status disconnected">
+      Disconnected from WebSocket server
+    </div>
+
+    <div class="controls">
+      <div class="channel-select">
+        <label for="channel">Channel:</label>
+        <select id="channel">
+          <option value="">Select a channel...</option>
+        </select>
+      </div>
+
+      <input
+        type="text"
+        id="serverPort"
+        placeholder="WebSocket Port (default: 3055)"
+        value="3055"
+      />
+
+      <button id="connectBtn">Connect to WebSocket</button>
+    </div>
+
+    <div class="info">
+      <strong>How to use:</strong>
+      <ol style="margin: 8px 0; padding-left: 20px">
+        <li>Start the WebSocket server (default port: 3055)</li>
+        <li>Start the MCP server</li>
+        <li>Select a channel and click Connect</li>
+        <li>Use Claude or other MCP clients to control Figma Slides</li>
+      </ol>
+    </div>
+
+    <script>
+      let ws = null;
+      let currentChannel = null;
+      const statusEl = document.getElementById("status");
+      const connectBtn = document.getElementById("connectBtn");
+      const serverPortInput = document.getElementById("serverPort");
+      const channelSelect = document.getElementById("channel");
+
+      function updateStatus(status, message) {
+        statusEl.className = `status ${status}`;
+        statusEl.textContent = message;
+      }
+
+      function connectWebSocket() {
+        const port = serverPortInput.value || "3055";
+        const wsUrl = `ws://localhost:${port}`;
+
+        updateStatus("connecting", "Connecting to WebSocket server...");
+        connectBtn.disabled = true;
+
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          updateStatus("connected", "Connected to WebSocket server");
+          console.log("WebSocket connected");
+
+          // Request available channels
+          ws.send(
+            JSON.stringify({
+              source: "figma_client",
+              type: "get_channels",
+              payload: {},
+            })
+          );
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            console.log("Received message:", message);
+
+            switch (message.type) {
+              case "get_channels":
+                const channels = message.payload?.channels || [];
+                channelSelect.innerHTML =
+                  '<option value="">Select a channel...</option>';
+                channels.forEach((ch) => {
+                  const option = document.createElement("option");
+                  option.value = ch;
+                  option.textContent = ch;
+                  channelSelect.appendChild(option);
+                });
+                // Auto-join channel_1 if available
+                if (channels.includes("channel_1") && !currentChannel) {
+                  channelSelect.value = "channel_1";
+                  ws.send(JSON.stringify({
+                    source: "figma_client",
+                    type: "join",
+                    payload: { channel: "channel_1", clientType: "figma_client" },
+                  }));
+                }
+                break;
+
+              case "join_result":
+                if (message.payload?.success) {
+                  currentChannel = message.payload.channel;
+                  updateStatus(
+                    "connected",
+                    `Connected to channel: ${currentChannel}`
+                  );
+                }
+                break;
+
+              case "transmit":
+                handleCommand(message.payload?.message);
+                break;
+            }
+          } catch (error) {
+            console.error("Error parsing message:", error);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error("WebSocket error:", error);
+          updateStatus("disconnected", "WebSocket connection error");
+          connectBtn.disabled = false;
+        };
+
+        ws.onclose = () => {
+          ws = null;
+          currentChannel = null;
+          connectBtn.disabled = false;
+          updateStatus("connecting", "Disconnected — auto-reconnecting in 3s...");
+          console.log("[heartbeat] Connection lost, scheduling reconnect");
+          setTimeout(() => {
+            if (!ws) connectWebSocket();
+          }, 3000);
+        };
+      }
+
+      function handleCommand(message) {
+        if (!message || !message.command) return;
+
+        console.log("Executing command:", message.command, message.params);
+
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: "execute-command",
+              id: message.id,
+              command: message.command,
+              params: message.params || {},
+            },
+          },
+          "*"
+        );
+      }
+
+      // Listen for command results from plugin code
+      window.onmessage = (event) => {
+        const msg = event.data.pluginMessage;
+        if (!msg) return;
+
+        if (msg.type === "command-result" || msg.type === "command-error") {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(
+              JSON.stringify({
+                source: "figma_client",
+                type: "message",
+                payload: {
+                  channel: currentChannel,
+                  message: {
+                    id: msg.id,
+                    result: msg.result,
+                    error: msg.error,
+                  },
+                },
+              })
+            );
+          }
+        }
+      };
+
+      // Join channel when selected
+      channelSelect.addEventListener("change", (e) => {
+        const channel = e.target.value;
+        if (channel && ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(
+            JSON.stringify({
+              source: "figma_client",
+              type: "join",
+              payload: {
+                channel: channel,
+                clientType: "figma_client",
+              },
+            })
+          );
+        }
+      });
+
+      connectBtn.addEventListener("click", connectWebSocket);
+
+      // Auto-connect on plugin startup
+      setTimeout(() => {
+        if (!ws) {
+          console.log("[auto-connect] Connecting to WebSocket...");
+          connectWebSocket();
+        }
+      }, 500);
+    </script>
+  </body>
+</html>

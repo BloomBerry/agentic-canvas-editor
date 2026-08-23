@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 58: Bullets Normalize Levels",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 2.274,
+    "input_tokens": 1312,
+    "output_tokens": 77,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000648,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 530,
+        "output_tokens": 32,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 0.9312448501586914
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 782,
+        "output_tokens": 45,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.3432447910308838
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.209636,
+    "if_judge_cost": 0.004911,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000648,
+    "total_cost": 0.215195
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent correctly changed the main text box line indentations so all top-level bullets remain at level 0 and every sub-point is normalized to level 1, with no unrelated content edits.",
+      "prompt": "In the main text box, simplify the bulleted list so it only has two indentation levels. All sub-points should be at the second level.",
+      "inference_sec": 57.30535387992859,
+      "judge_sec": 4.789646148681641,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 28731,
+          "output_tokens": 4339,
+          "cache_read_input_tokens": 126002,
+          "cache_creation_5m": 5482,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.209636,
+          "n_responses": 4,
+          "elapsed_sec": 57.305
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 4.79,
+          "input_tokens": 2177,
+          "output_tokens": 219,
+          "reasoning_tokens": 161,
+          "cost_usd": 0.004911,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

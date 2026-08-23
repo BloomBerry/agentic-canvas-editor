@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 8: Summarize Paragraphs",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 4.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 4.525,
+    "input_tokens": 1376,
+    "output_tokens": 95,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000702,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 562,
+        "output_tokens": 35,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 2.1083741188049316
+      },
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 814,
+        "output_tokens": 60,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 2.4163107872009277
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.221446,
+    "if_judge_cost": 0.046406,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000702,
+    "total_cost": 0.26855399999999996
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 4.0,
+      "IF_reason": "The agent summarized the major text blocks on slides 2, 3, 4, and 6 into shorter concise paragraphs, and slide 5 was already a concise quote, but slide 2 still retains the original challenge bullet list alongside the summary and slide 6 remains split into two separate summarized paragraphs rather than one single paragraph for the slide.",
+      "prompt": "On slides 2 through 6, please summarize the large block of text on each slide into a single, concise paragraph.",
+      "inference_sec": 95.63104891777039,
+      "judge_sec": 39.949175119400024,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 3471,
+          "output_tokens": 1664,
+          "cache_read_input_tokens": 99431,
+          "cache_creation_5m": 41665,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.221446,
+          "n_responses": 2,
+          "elapsed_sec": 95.631
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 39.949,
+          "input_tokens": 23989,
+          "output_tokens": 1642,
+          "reasoning_tokens": 1552,
+          "cost_usd": 0.046406,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "case_name": "Case 2: Fix Misspelling",
+  "max_iter": 3,
+  "threshold": 4.0,
+  "feedback_mode": "verbatim",
+  "iters_run": 1,
+  "final_IF": 5.0,
+  "care_router_usage": {
+    "model": "gpt-5.1-mini",
+    "elapsed_sec": 3.203,
+    "input_tokens": 1376,
+    "output_tokens": 67,
+    "reasoning_tokens": 0,
+    "cost_usd": 0.000658,
+    "calls": 2,
+    "per_call": [
+      {
+        "label": "dual_mode",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 814,
+        "output_tokens": 33,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 1.0560388565063477
+      },
+      {
+        "label": "dual_needs_image",
+        "model": "gpt-4.1-mini",
+        "input_tokens": 562,
+        "output_tokens": 34,
+        "reasoning_tokens": 0,
+        "elapsed_sec": 2.1467199325561523
+      }
+    ]
+  },
+  "totals_usd": {
+    "agent_cost": 0.220681,
+    "if_judge_cost": 0.037685,
+    "distill_cost": 0.0,
+    "care_router_cost": 0.000658,
+    "total_cost": 0.259024
+  },
+  "history": [
+    {
+      "iter": 1,
+      "IF": 5.0,
+      "IF_reason": "The agent corrected the apparent spelling errors throughout the deck, including titles, body text, agenda items, footers, and repeated module labels, with only incidental text-width/spacing changes caused by the corrections.",
+      "prompt": "Proofread the entire presentation and correct any spelling errors you find.",
+      "inference_sec": 109.68790817260742,
+      "judge_sec": 32.39579105377197,
+      "usage": {
+        "agent": {
+          "model": "claude-sonnet-4-6",
+          "input_tokens": 14250,
+          "output_tokens": 5263,
+          "cache_read_input_tokens": 77928,
+          "cache_creation_5m": 20162,
+          "cache_creation_1h": 0,
+          "reasoning_tokens": 0,
+          "cost_usd": 0.220681,
+          "n_responses": 2,
+          "elapsed_sec": 109.688
+        },
+        "if_judge": {
+          "model": "gpt-5.5",
+          "elapsed_sec": 32.396,
+          "input_tokens": 21388,
+          "output_tokens": 1095,
+          "reasoning_tokens": 1034,
+          "cost_usd": 0.037685,
+          "calls": 1
+        }
+      }
+    }
+  ]
+}

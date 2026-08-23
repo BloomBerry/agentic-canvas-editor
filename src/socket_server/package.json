@@ -1,0 +1,21 @@
+{
+  "name": "figma-slides-mcp-socket-server",
+  "description": "Figma Slides MCP Socket Server",
+  "version": "1.0.0",
+  "main": "socket.ts",
+  "type": "module",
+  "scripts": {
+    "start": "node dist/socket.js",
+    "build": "tsc",
+    "dev": "tsx socket.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.19.4",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "ws": "^8.18.2"
+  }
+}
