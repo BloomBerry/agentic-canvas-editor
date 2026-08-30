@@ -1,13 +1,14 @@
 # Agentic Canvas Editor
 
-[![Paper](https://img.shields.io/badge/EMNLP%202026-Industry%20Track-b31b1b.svg)](#citation)
+[![Paper](https://img.shields.io/badge/arXiv-2608.24103-b31b1b.svg)](https://arxiv.org/abs/2608.24103)
+[![EMNLP 2026](https://img.shields.io/badge/EMNLP%202026-Industry%20Track-blue.svg)](#citation)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 Official source code for our paper **"ACE: A Self-Correcting Agentic Canvas
 Editor for Multi-Slide Presentation Automation"**, **accepted at the EMNLP 2026
 Industry Track**.
 
-> 📄 **Paper:** _archive URL to be updated_ (`xxx.archive` — TBD)
+> 📄 **Paper:** https://arxiv.org/abs/2608.24103
 > 🗂️ **Benchmark dataset:** _release link to be updated_ (see [Citation](#citation))
 
 This package includes:
@@ -582,22 +583,18 @@ Each message has the schema:
 
 This work was **accepted at the EMNLP 2026 Industry Track**.
 
-> **Archive URL / DOI:** _to be updated_ (`xxx.archive` — placeholder; the paper
-> link will be added once available).
+> **Paper:** https://arxiv.org/abs/2608.24103
 
 If you use this code or the benchmark, please cite:
 
 ```bibtex
-@inproceedings{ace-2026,
+@inproceedings{jang2026ace,
   title     = {ACE: A Self-Correcting Agentic Canvas Editor for Multi-Slide Presentation Automation},
-  author    = {MIRIDIH},
+  author    = {Jang, JooYoung},
   booktitle = {Proceedings of the 2026 Conference on Empirical Methods in Natural Language Processing: Industry Track (EMNLP 2026)},
   year      = {2026},
-  note      = {Archive URL to be updated},
-  url       = {xxx.archive}
+  url       = {https://arxiv.org/abs/2608.24103}
 }
 ```
-
-<!-- TODO: fill in author list and final archive/DOI URL once available. -->
 
 For questions about running this code, please open an issue on this repository.
