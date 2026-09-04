@@ -1,14 +1,14 @@
 # Agentic Canvas Editor
 
-[![Paper](https://img.shields.io/badge/arXiv-2608.24103-b31b1b.svg)](https://arxiv.org/abs/2608.24103)
-[![EMNLP 2026](https://img.shields.io/badge/EMNLP%202026-Industry%20Track-blue.svg)](#citation)
+[![Paper](https://img.shields.io/badge/arXiv-2608.24103-b31b1b.svg)](https://arxiv.org/pdf/2608.24103)
+[![EMNLP 2026](https://img.shields.io/badge/EMNLP%202026-Industry%20Track%20%28Main%29%20Accepted-blue.svg)](#citation)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 Official source code for our paper **"ACE: A Self-Correcting Agentic Canvas
 Editor for Multi-Slide Presentation Automation"**, **accepted at the EMNLP 2026
-Industry Track**.
+Industry Track (Main)**.
 
-> 📄 **Paper:** https://arxiv.org/abs/2608.24103
+> 📄 **Paper:** https://arxiv.org/pdf/2608.24103
 > 🗂️ **Benchmark dataset:** _release link to be updated_ (see [Citation](#citation))
 
 This package includes:
@@ -581,9 +581,9 @@ Each message has the schema:
 
 ## Citation
 
-This work was **accepted at the EMNLP 2026 Industry Track**.
+This work was **accepted at the EMNLP 2026 Industry Track (Main)**.
 
-> **Paper:** https://arxiv.org/abs/2608.24103
+> **Paper:** https://arxiv.org/pdf/2608.24103
 
 If you use this code or the benchmark, please cite:
 
@@ -593,7 +593,7 @@ If you use this code or the benchmark, please cite:
   author    = {Jang, JooYoung},
   booktitle = {Proceedings of the 2026 Conference on Empirical Methods in Natural Language Processing: Industry Track (EMNLP 2026)},
   year      = {2026},
-  url       = {https://arxiv.org/abs/2608.24103}
+  url       = {https://arxiv.org/pdf/2608.24103}
 }
 ```
 
