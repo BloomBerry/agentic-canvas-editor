@@ -1,9 +1,927 @@
 [
   {
+    "name": "Case 1: Translate to English But Keep French",
+    "prompt": "Please translate this presentation from Kazakh to English. However, it's very important that you do not translate any of the French text. Leave all French words and sentences exactly as they are.",
+    "original": "data/TranslateToEnglishButKeepallFrenchTestA",
+    "ground_truth": "data/TranslatetoEnglishButKeepallFrenchGroundTruthA",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 2: Fix Misspelling",
+    "prompt": "Proofread the entire presentation and correct any spelling errors you find.",
+    "original": "data/FixMisspellingsTestA",
+    "ground_truth": "data/FixMisspellingsGroundTruthA",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 3: Add Footer Text Box",
+    "prompt": "On slide 5, add a source citation at the top right that says 'VerifyMe - case study'.\n • color: Primary color\n • font size: 14",
+    "original": "data/AddFooterSourceTestA",
+    "ground_truth": "data/AddFooterSourceGroundTruthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 4: Increase Font Size on Slide 8",
+    "prompt": "On slide 8, increase the font size of all text by 2 points, but do not change the topic.",
+    "original": "data/FontSizePlus2Slide8TestA",
+    "ground_truth": "data/FontSizePlus2Slide8GroundTruthA",
+    "category": [
+      "Content",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 5: Change Body Text Font to Inter",
+    "prompt": "Throughout the presentation, change the font for all body text to inter. body means less or equal to 36 font size. Style (ex. regular, medium) should be same as origin. If it is mixed, use bold style.",
+    "original": "data/DmSansToInterTestA",
+    "ground_truth": "data/DmSansToInterGroundTruthA",
+    "category": [
+      "Content",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 6: Update Quarter Two Data (A)",
+    "prompt": "Throughout the presentation, change all instances of 'Q2' to 'Second Quarter'.",
+    "original": "data/QuarterTwoTestA",
+    "ground_truth": "data/QuarterTwoGroundTruthA",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 7: Update Quarter Two Data (B)",
+    "prompt": "Please replace all instances of 'Q2' with 'Second Quarter' throughout the presentation. Also, on slide 9, change the title font size to 32pt. Finally, on slides 6, 7, and 9, please bold the text below the charts.",
+    "original": "data/QuarterTwoTestB",
+    "ground_truth": "data/QuarterTwoGroundTruthB",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 8: Summarize Paragraphs",
+    "prompt": "On slides 2 through 6, please summarize the large block of text on each slide into a single, concise paragraph.",
+    "original": "data/SummarizeParagraphsTestA",
+    "ground_truth": "data/SummarizeParagraphsGroundTruthA",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 9: Shorten Bullet Points",
+    "prompt": "On slides 3 and 5, please shorten the paragraphs and bullet points to be more concise. Aim for around 10 words per point, but leave some of the longer points as they are if shortening them would lose important details. Make sure to preserve the core meaning.",
+    "original": "data/ShortenBulletPointsTestB",
+    "ground_truth": "data/ShortenBulletPointsGroundTruthB",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 10: Italicize Subheadings (A)",
+    "prompt": "Go through the entire presentation and italicize all the text in the main content boxes on each slide. Do not change the main slide titles.",
+    "original": "data/ItalicizeSubheadingsTestA",
+    "ground_truth": "data/ItalicizeSubheadingsGroundTruthA",
+    "category": [
+      "Content",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 11: Italicize Subheadings (B)",
+    "prompt": "Apply an italic style to all text in this presentation, but do not change the main title slide (slide 1) or slide number bigger than 16.",
+    "original": "data/ItalicizeSubheadingsTestB",
+    "ground_truth": "data/ItalicizeSubheadingsGroundTruthB",
+    "category": [
+      "Content",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 12: Stock Photo Cleanup ",
+    "prompt": "Clean up the images into a sleek panel gallery layout. Add a visible caption onto each picture that describes each photo.",
+    "original": "data/MatchStockPhotos_Test",
+    "ground_truth": "data/MatchStockPhotosGroundTruth",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 14: Bold Title (A)",
+    "prompt": "Make the title on every slide bold, except for the main title slide (slide 1).",
+    "original": "data/Bolded_BoldTitleTestA",
+    "ground_truth": "data/Bolded_BoldTitleGroundTruthA",
+    "category": [
+      "Content",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 15: Bold Title (B)",
+    "prompt": "Make all the slide titles bold throughout the presentation.",
+    "original": "data/Bolded_BoldTitleTestB",
+    "ground_truth": "data/Bolded_BoldTitleGroundTruthB",
+    "category": [
+      "Content",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 16: Curate Multi-Panel Photo Layout",
+    "prompt": "This presentation needs a professional photo layout. On slide 2, straighten the three photos labeled WATERFALL, STAIRCASE, and CHESS and arrange them as a clean horizontal row inside the pink panel. Remove their rotations, resize them so they are nearly the same square size, and align their top edges to exactly the same vertical position so they read as a unified triptych. Each photo should sit directly above its corresponding label. Keep the title, pink background rectangle, blue frame decorations, and caption text boxes otherwise unchanged. The slide background should use a solid fill.",
+    "original": "data/OrderPhotosTest",
+    "ground_truth": "data/OrderPhotosGroundTruth",
+    "category": [
+      "Layout",
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 17: Build Ensemble Category Boards",
+    "prompt": "Transform this presentation into a polished ensemble category board with two coordinated slides. On slide 1, keep the four animal photos (cheetah, tiger, lion, and kitten) and remove all texture photos. Arrange the four animal photos into a clean, asymmetrical collage on a dark charcoal background, featuring a large centered frame made of nested white-outline rectangles. Separate the photos with clean gaps so they never touch. On slide 2, convert the four texture and landscape photos (pebbles, sand with spheres, dunes, and canyon) into a gallery-style board. Use the same dark charcoal background and nested white frame. Place the four photos in a neat 2×2 grid inside the frame, with even spacing between the images to create a balanced, professional layout.",
+    "original": "data/EnsembleCategoryTest",
+    "ground_truth": "data/EnsembleCategoryGroundTruth",
+    "category": [
+      "Layout",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 19: Translate Chinese",
+    "prompt": "Translate this entire presentation from Chinese to English, ensuring the new text fits neatly within the existing slide layouts.",
+    "original": "data/TranslateChineseTestA",
+    "ground_truth": "data/TranslateChineseGroundTruthA",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 21: Title Case Titles",
+    "prompt": "Please go through the presentation and change all the slide titles to use Title Case capitalization.",
+    "original": "data/FixTitleCase_TestA",
+    "ground_truth": "data/FixTitleCase_GroundTruthA",
+    "category": [
+      "Content",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 22: Center Align Title Placeholders",
+    "prompt": "On each slide, horizontally center the text in the main title placeholder.",
+    "original": "data/CenterAlignTitles_Test",
+    "ground_truth": "data/CenterAlignTitles_GroundTruth",
+    "category": [
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 23: Add Thank You Slide",
+    "prompt": "Add a new slide at the very end with the title 'Thank you'.",
+    "original": "data/AddThankYouSlide_TestA",
+    "ground_truth": "data/AddThankYouSlide_GroundTruthA",
+    "category": [
+      "Structure",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 24: Add Agenda Slide After First",
+    "prompt": "After the title slide, add a new slide titled 'Agenda'. The agenda should list these three sections:\n\nSection 1:\n02. Founding Story: Origin and background.\n03. Mission: Core purpose and goals.\n04. Values: Shared beliefs and principles.\n\nSection 2: Tools\n06. Communication: Channels and protocols.\n08. Design: Design standards and aesthetics.\n\nSection 3: Process\n10. Time: Scheduling, deadlines, and management.\n11. Feedback: Guidelines for giving and receiving input.",
+    "original": "data/AddAgendaSlide_TestA",
+    "ground_truth": "data/AddAgendaSlide_GroundTruthA",
+    "category": [
+      "Structure"
+    ]
+  },
+  {
+    "name": "Case 25: Match Table Theme and Colors",
+    "prompt": "The table on slide 2 looks out of place. Please reformat it to match the presentation's color scheme, using a style with a dark header and alternating row colors.",
+    "original": "data/FixTableThemeColor_TestA",
+    "ground_truth": "data/FixTableThemeColor_GroundTruthA",
+    "category": [
+      "Content",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 28: Fix Slide Order and Agenda",
+    "prompt": "The agenda on slide 1 is all mixed up and the slides are in the wrong order. Please fix the presentation so it flows logically and the agenda list matches the new slide order. Remove pages that are not covered in the agenda.",
+    "original": "data/FixAgendaAndOrder_TestA",
+    "ground_truth": "data/FixAgendaAndOrder_GroundTruthA",
+    "category": [
+      "Structure"
+    ]
+  },
+  {
+    "name": "Case 29: Convert Bar Chart to Pie Chart",
+    "prompt": "On slide 3, replace the existing row chart with a donut chart. The donut chart should occupy the same position and size as the original chart.",
+    "original": "data/PieChart_TestA",
+    "ground_truth": "data/PieChart_GroundTruthA",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 31: Fix Text Overflow",
+    "prompt": "The main text box on this slide is too wide and goes off the right side of the screen. Please resize it so it fits entirely on the slide, making sure all the text is still visible.",
+    "original": "data/FixTextOverFlow_TestA",
+    "ground_truth": "data/FixTextOverFlow_GroundTurthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 32: Arrange Image and Text",
+    "prompt": "The image on the left is cut off, the text on the right is overflowing its box and the aestrisks are misplaced. Please adjust the layout to make sure all elements are fully visible on the slide.",
+    "original": "data/FixImage&TextOverFlow_TestB",
+    "ground_truth": "data/FixImage&TextOverFlow_GroundTruthB",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 33: Fix Chart Theme Color",
+    "prompt": "Adjust theme colors: replace purple in charts with dark blue, but leave other colors intact.",
+    "original": "data/ChartThemeColor_TestA",
+    "ground_truth": "data/ChartThemeColor_GroundTruthA",
+    "category": [
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 35: Structural Fix",
+    "prompt": "On slide 2, shorten the content into markdown format. Split the title text content into two text elements, and change the font size of the text 'Hannah Ung' to 96pt. Also, change font style from slide 3 ~ 5 into inter format.",
+    "original": "data/StructuralFix_TestA",
+    "ground_truth": "data/StructuralFix_GroundTruthA",
+    "category": [
+      "Content",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 37: Add Transitions",
+    "prompt": "Apply a 'Dissolve' transition to all slides in the presentation.",
+    "original": "data/AddTransitions_TestA",
+    "ground_truth": "data/AddTransitions_GroundTruthA",
+    "category": [
+      "Interactivity"
+    ]
+  },
+  {
+    "name": "Case 38: Flip Theme Scheme",
+    "prompt": "Flip the theme (light beige/tan and green). Ensure text is readable against new backgrounds.",
+    "original": "data/FlipThemeScheme_TestA",
+    "ground_truth": "data/FlipThemeScheme_GroundTruthA",
+    "category": [
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 39: Generate Comparison Conclusion",
+    "prompt": "Add a new conclusion slide at the end summarizing key points from the presentation.",
+    "original": "data/GenerateCompConclusion_TestA",
+    "ground_truth": "data/GenerateCompConclusion_GroundTruthA",
+    "category": [
+      "Content",
+      "Structure"
+    ]
+  },
+  {
+    "name": "Case 42: Organize Research Poster",
+    "prompt": "Please reorganize this research poster into a clean four-column layout. The first column should be 'Introduction & Research Process' (including the abstract preparation section), the second 'Types of Research' (covering Qualitative and Quantitative Data), the third 'Display Board Tips' (Typography, Formatting, and Visual Elements), and the fourth 'Data Analysis & Results' (including the timeline chart, statistical tests, and reporting standards). Arrange all the related text, charts, and bullet points under their correct headings, maintaining the York St John University branding with the blue header and footer.",
+    "original": "data/OrganizeResearchPoster_TestA",
+    "ground_truth": "data/OrganizeResearchPoster_GroundTruthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 43: Transitionary Slides",
+    "prompt": "Based on the agenda table on slide 2, insert a section divider slide before each new section in the presentation.",
+    "original": "data/TransitionarySlides_TestA",
+    "ground_truth": "data/TransitionarySlides_GroundTruthA",
+    "category": [
+      "Structure"
+    ]
+  },
+  {
+    "name": "Case 44: Match Flag to Text",
+    "prompt": "The list of regions and the flags at the bottom are mismatched. Please rearrange the slide by placing each flag next to its corresponding description from the list. Delete any duplicate flags.",
+    "original": "data/MatchFlagtoText_TestA",
+    "ground_truth": "data/MatchFlagtoText_GroundTruthA",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 45: Lighter Colors",
+    "prompt": "Please lighten the color scheme on this slide. For the 'Growth', 'Opportunity' and 'Decrease' sections, change the background of the main content boxes to a lighter color. Then, update the text and the icons inside them to be white for Growth, Opportunity and black for Decrease to ensure they are readable.",
+    "original": "data/LighterColors_TestA",
+    "ground_truth": "data/LighterColors_GroundTruthA",
+    "category": [
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 46: Convert Text & Arrows to SmartArt",
+    "prompt": "Please clean up this diagram. Convert the text boxes and arrows into a more organized, structured diagram centered around the person icon.",
+    "original": "data/ConvertText&Arrows2SmartArt_TestA",
+    "ground_truth": "data/ConvertText&Arrows2SmartArt_GroundTruthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 48: Add Slide Numbers",
+    "prompt": "Add date 'February 9, 2026' to bottom left and slide number to bottom right of every slide.",
+    "original": "data/AddSlideNumber_TestB",
+    "ground_truth": "data/AddSlideNumber_GroundTruthB",
+    "category": [
+      "Structure"
+    ]
+  },
+  {
+    "name": "Case 49: Normalize Thousand Separators",
+    "prompt": "Go through the entire presentation and add comma separators for thousands to all numbers 1,000 and larger, except number representing years.",
+    "original": "data/NormalizeThousandSeperators_Test",
+    "ground_truth": "data/NormalizeThousandSeperators_GroundTruth",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 50: Normalize Date Format",
+    "prompt": "Go through the presentation and standardize all the date formats to 'Month Day, Year', for example 'March 22, 2022'. Make sure to handle different formats like '28 March 2022', '02/26/2022', and '18 of March 2022'.",
+    "original": "data/NormalizeDate_Test",
+    "ground_truth": "data/NormalizeDate_GroundTruth",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 51: Currency Symbol Swap (EUR→USD)",
+    "prompt": "On slide 11, convert monetary value from Euros to US Dollars. This includes changing the currency symbol, and the thousands separator.",
+    "original": "data/CurrencySwap_Test",
+    "ground_truth": "data/CurrencySwap_GroundTruth",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 52: Add Source",
+    "prompt": "In the text box at the bottom of the slide, under 'PEOPLE POLITENCE', add the text 'People bow instead of shaking hands' and align with the next text.",
+    "original": "data/AddBow_TestA",
+    "ground_truth": "data/AddBow_GroundTruthA",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 54: Match Slide Deck Theme",
+    "prompt": "Apply the layout from slide 1 to all subsequent slides (2 through 9). Make sure the existing text and images are adjusted to fit the new layout.",
+    "original": "data/MatchSlideDeck_TestA",
+    "ground_truth": "data/MatchSlideDeck_GroundTruthA",
+    "category": [
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 55: Highlight Important Words",
+    "prompt": "Keep the title and bullet headers unchanged, and highlight key phrases (organization names, core actions, critical terms) in the body text by making them bold and teal (RGB: 0, 0.588, 0.533).",
+    "original": "data/HighlightImportantWords_TestA",
+    "ground_truth": "data/HighlightImportantWords_GroundTruthA",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 56: Add Pictures",
+    "prompt": "For each of the words at the bottom of the slide (baseball, airplane, basketball), add a relevant icon or picture above the text.",
+    "original": "data/AddPictures_Test",
+    "ground_truth": "data/AddPictures_GroundTruth",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 57: Add Water Mark",
+    "prompt": "Add a 'DRAFT' watermark to every slide in the presentation.",
+    "original": "data/AddWaterMark_Test",
+    "ground_truth": "data/AddWaterMark_GroundTruth",
+    "category": [
+      "Content",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 58: Bullets Normalize Levels",
+    "prompt": "In the main text box, simplify the bulleted list so it only has two indentation levels. All sub-points should be at the second level.",
+    "original": "data/BulletsNormalizeLevels_Test",
+    "ground_truth": "data/BulletsNormalizeLevels_GroundTruth",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 59: Convert Hyper Link",
+    "prompt": "In the text box that starts with 'Visit https://www.berkeley.edu/...', make the two URLs clickable hyperlinks.",
+    "original": "data/ConvertHyperLink_Test",
+    "ground_truth": "data/ConvertHyperLink_GroundTruth",
+    "category": [
+      "Interactivity"
+    ]
+  },
+  {
+    "name": "Case 60: Fix Text Placement",
+    "prompt": "The title 'Team Members' is overlapping the image. Move it to the top of the slide, above the images, so it functions as a proper title. Make each title and four images autolayout inorder not to overlap.",
+    "original": "data/FixTextPlacement_Test",
+    "ground_truth": "data/FixTextPlacement_GroundTruth",
+    "category": [
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 61: Sort By Score And Crop Image 169",
+    "prompt": "In the table on the slide, sort the rows by the 'Score' column in descending order.",
+    "original": "data/SortByScoreAndCropImage169_Test",
+    "ground_truth": "data/SortByScoreAndCropImage169_GroundTruth",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 62: Z Order",
+    "prompt": "Bring the picture and the oval shape to the front so they are visible on top of the large rectangle.",
+    "original": "data/ZOrder_Test",
+    "ground_truth": "data/ZOrder_GroundTruth",
+    "category": [
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 63: Spatial Constraint Layout",
+    "prompt": "Please arrange the three tables (A, B, and C) on the slide according to the list of constraints. Make sure to follow all the rules.",
+    "original": "data/SpatialLogicLayout_TestA",
+    "ground_truth": "data/SpatialLogicLayout_GroundTruthA",
+    "category": [
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 64: Colorblind-Safe Chart Palette",
+    "prompt": "Please make the chart on this slide accessible for people with colorblindness by applying the Okabe-Ito color palette to the data series.",
+    "original": "data/ColorblindPalette_TestA",
+    "ground_truth": "data/ColorblindPalette_GroundTruthA",
+    "category": [
+      "Content",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 65: Unit Conversion: Fahrenheit → Celsius",
+    "prompt": "On this slide, please convert all the temperatures from Fahrenheit to Celsius, showing the results with one decimal place. Update the chart with these new Celsius values and change its vertical axis title to 'Temperature (°C)'. Don't change the temperature for Paris, as it's already in Celsius.",
+    "original": "data/UnitConversionTemps_TestA",
+    "ground_truth": "data/UnitConversionTemps_GroundTruthA",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 66: Add Picture Borders",
+    "prompt": "For all the pictures in this presentation, add a thin, dark gray border.",
+    "original": "data/AddPictureBorders_TestA",
+    "ground_truth": "data/AddPictureBorders_GroundTruthA",
+    "category": [
+      "Content",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 67: WCAG Accessibility & Master Cleanup",
+    "prompt": "Apply the correct text styles to all text in the remaining slides, referencing the text styles from Slide 1. After all, remove Slide 1.",
+    "original": "data/AccessibilityMasterCleanup_TestA",
+    "ground_truth": "data/AccessibilityMasterCleanup_GroundTruthA",
+    "category": [
+      "Structure",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 68: Swimlane Flow Process Canonicalization",
+    "prompt": "Transform the messy layout into a clean 'Swimlanes' Figma template. Change the title to 'Swimlanes' and place the subtitle 'A template for Figma' at the bottom left. Reconstruct the diagram on the right into a 4-row swimlane grid with the following specific arrangement:\nStart: Place a Green Circle in the top-left lane.\nProcess Steps: Distribute document icons across the lanes: Add Blue icons in the first and second lanes. Add a Yellow icon in the third lane. Add an Orange icon in the bottom lane. Add a Purple icon in the top lane, towards the right.\nDecision & End: Insert a Purple Diamond shape in the middle of the third lane, and end the flow with a Red Circle in the top-right corner.\nConnections: Link all elements with clean elbow connectors.",
+    "original": "data/SwimlaneFlowCanonicalization_TestA",
+    "ground_truth": "data/SwimlaneFlowCanonicalization_GroundTruthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 69: Image-Text Correlation",
+    "prompt": "Match each image to its correct caption, rearrange for balanced layout, update titles, and resize all images to 3.2x2.4.",
+    "original": "data/ImageTextCorrelation_TestA",
+    "ground_truth": "data/ImageTextCorrelation_GroundTruthA",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 70: Format Python Code Blocks (Dark Theme, Multi-Slide)",
+    "prompt": "On slides 2, 3, and 4, format the large text boxes containing Python code. Apply a dark theme with syntax highlighting, similar to a VS Code style.",
+    "original": "data/FormatPythonCodeBlock_DarkMulti_TestA",
+    "ground_truth": "data/FormatPythonCodeBlock_DarkMulti_GroundTruthA",
+    "category": [
+      "Content",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 71: Conditional Table Formatting (Negative Numbers)",
+    "prompt": "In all tables throughout the presentation, find any negative numbers and format them to be red and bold.",
+    "original": "data/ConditionalTableFormatting_Negatives_TestA",
+    "ground_truth": "data/ConditionalTableFormatting_Negatives_GroundTruthA",
+    "category": [
+      "Content",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 72: Dynamic SmartArt Timeline with Image Integration",
+    "prompt": "On slide 1, convert the numbered list of project milestones into a 'Basic Timeline' SmartArt graphic. Then, add a relevant icon above each milestone on the timeline. each icon and corresponding smartart block should be aligned.",
+    "original": "data/DynamicSmartArtTimeline_TestA",
+    "ground_truth": "data/DynamicSmartArtTimeline_GroundTruthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 73: Dynamic Data Label Placement",
+    "prompt": "Rearrange four metric boxes to be above the chart to fix overlapping labels.",
+    "original": "data/DynamicDataLabelPlacement_TestA",
+    "ground_truth": "data/DynamicDataLabelPlacement_GroundTruthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 74: Cross-Slide Data Consolidation",
+    "prompt": "Consolidate data from slides 2-3 into a table on slide 2. Delete slides 3-4. Format titles to Title Case. Align/resize images on last slide.",
+    "original": "data/CrossSlideDataConsolidation_TestA",
+    "ground_truth": "data/CrossSlideDataConsolidation_GroundTruthA",
+    "category": [
+      "Content",
+      "Structure"
+    ]
+  },
+  {
+    "name": "Case 75: 12-Column Grid & Baseline Rhythm Canonicalization (Multi-modal)",
+    "prompt": "Please clean up this presentation. The slides are a mess. Align all the content to a consistent grid, ensure text boxes are vertically aligned, center the chart, and organize the pictures neatly with their captions below them. Crucially, please update the text on the slides that describes the layout problems to reflect that they have now been fixed.",
+    "original": "data/GridBaselineReasoning_TestA",
+    "ground_truth": "data/GridBaselineReasoning_GroundTruthA",
+    "category": [
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 76: Aesthetic Slide Makeover",
+    "prompt": "Overhaul this presentation to make it look professional and modern. Unify the fonts and colors, change the pie chart to a column chart, and organize the messy image slide into a clean grid.",
+    "original": "data/AestheticMakeover_TestA",
+    "ground_truth": "data/AestheticMakeover_GroundTruthA",
+    "category": [
+      "Styling",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 77: Educational Solar System Makeover",
+    "prompt": "Overhaul this presentation on the solar system to follow modern educational design principles. Summarize the content on the 'Inner Planets' slide into four key bullet points. For the other content-heavy slides (Overview, Outer Planets, Conclusion), remove the detailed paragraphs, leaving only the titles on the slides. Create a new slide titled 'Planetary Sizes' using an appropriate image. Unify the entire presentation with a clean, professional look using an Arial font for titles and a consistent blue and white color scheme.",
+    "original": "data/EducationalMakeoverSolarSystem_TestA",
+    "ground_truth": "data/EducationalMakeoverSolarSystem_GroundTruthA",
+    "category": [
+      "Content",
+      "Styling",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 78: Rock Cycle Recognition",
+    "prompt": "Overhaul this presentation to be more professional and visually engaging. Redesign the title slide with a modern two-column layout. On the second slide, organize the rock types into a clear three-column format with images and summarized descriptions. Finally, transform the text-heavy rock cycle on the third slide into a clean, visual diagram.",
+    "original": "data/EducationalRockRecognition_TestA",
+    "ground_truth": "data/EducationalRockRecognition_GroundTruthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 79: Legend Placement Canonicalization",
+    "prompt": "On every slide, move the chart legend to the bottom of the chart and update the slide title to say '(Legend Bottom)'.",
+    "original": "data/LegendBottomMultiTypes_TestA",
+    "ground_truth": "data/LegendBottomMultiTypes_GroundTruthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 80: Update Theme and Slide Backgrounds (A)",
+    "prompt": "Apply a new professional design theme to the entire presentation using a two-tone blue color scheme. For content slides, create a layout with a dark blue vertical panel on the left containing the title inside a circle, and a light blue panel on the right for the body text. For section break slides, use a full-bleed layout with the same blue panels but remove all text. Standardize all body text to black and title text to white.",
+    "original": "data/updatetheme_TestA",
+    "ground_truth": "data/updatetheme_GroundTruthA",
+    "category": [
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 81: Add Company Logo",
+    "prompt": "Add company logo (from page 1) to the best corner of every slide. Remove the icon page afterwards.",
+    "original": "data/AddCompanyLogoTestA_MonthlyScoreboardInfographic",
+    "ground_truth": "data/AddCompanyLogoGroundTruthA_MonthlyScoreboardInfographic",
+    "category": [
+      "Layout",
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 82: Add Slide Border",
+    "prompt": "On every slide, add a thin, dark gray border around the content.",
+    "original": "data/AddSlideBorderTestB",
+    "ground_truth": "data/AddSlideBorderGroundTruthB",
+    "category": [
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 83: Bibliography Slide from Footers",
+    "prompt": "Find all the source citations from the bottom of my slides, and create a new 'Source' slide in the final slide. The new slide should list all unique sources, alphabetized.",
+    "original": "data/AddBibliography_TestA",
+    "ground_truth": "data/AddBibliography_GroundTruthA",
+    "category": [
+      "Structure"
+    ]
+  },
+  {
+    "name": "Case 84: Add Progress Bar",
+    "prompt": "Add a progress bar to the bottom of every slide to track the presentation's progress.",
+    "original": "data/AddProgressBarTestC_ProjectManagementWorkflowInfographic",
+    "ground_truth": "data/AddProgressBarGroundTruthC_ProjectManagementWorkflowInfographic",
+    "category": [
+      "Structure",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 86: Dash and Minus Normalization",
+    "prompt": "On this slide, please correct the dashes and minus signs to follow standard typographic rules. For the date range, use an en dash. For the negative temperature, use a proper minus sign. For the clause breaks, replace the em dashes with spaced en dashes.",
+    "original": "data/DashMinusNormalization_TestEasy",
+    "ground_truth": "data/DashMinusNormalization_GroundTruthEasy",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 87: Merge Near-Duplicate Slides",
+    "prompt": "Please remove any duplicate slides from this presentation. If you find a duplicate, delete the one that is more out of place.",
+    "original": "data/DeleteDuplicate_TestA",
+    "ground_truth": "data/DeleteDuplicate_GroundTruthA",
+    "category": [
+      "Structure"
+    ]
+  },
+  {
+    "name": "Case 88: Normalize Images and Objects on Slides",
+    "prompt": "Some of my pictures and shapes are running off the edges of the slides. Can you adjust them so everything fits neatly on each slide?",
+    "original": "data/ObjectDistance_TestA",
+    "ground_truth": "data/ObjectDistance_GroundTruthA",
+    "category": [
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 89: Animal Research Poster",
+    "prompt": "Replace 'Lorem Ipsum' with factual info for toucan research poster. Adjust font sizes and update source citations.",
+    "original": "data/AnimalResearchPoster",
+    "ground_truth": "data/AnimalResearchPoster_final_updated",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 90: Recreate Screenshot as Editable Slide",
+    "prompt": "On slide 12, there is a screenshot of a milstones slide. Replace this screenshot as a new, fully editable slide. Use the 'milstones Slide' layout, extract the text and the crest from the image, and place them as separate, editable elements.",
+    "original": "data/UB_Title_Screenshot_TestA",
+    "ground_truth": "data/UB_Title_Screenshot_GroundTruthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 91: Add QR Code",
+    "prompt": "On the last slide, add a QR code for the URL https://github.com/BloomBerry/LADA. Below the QR code, add a text box with the caption 'GitHub: BloomBerry/LADA'.",
+    "original": "data/AddQRCode_TestA",
+    "ground_truth": "data/AddQRCode_GroundTruthA",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 92: Avatar Circle Crop",
+    "prompt": "Make all the team photos circular. They should all be the same size tall and be vertically aligned.",
+    "original": "data/AvatarCircleCrop_TestA",
+    "ground_truth": "data/AvatarCircleCrop_GroundTruthA",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 93: Professional Climate Theme",
+    "prompt": "Apply professional theme (blue titles, gray body). Replace static bar chart (Slide 4) with editable chart. Add progress bar. Add Bibliography slide.",
+    "original": "data/climate_original",
+    "ground_truth": "data/climate_ground_truth",
+    "category": [
+      "Content",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 96: Reading Order Fix (Complex Slides)",
+    "prompt": "On slides 2 through 5, correct the reading order for accessibility. Ensure the slide title is read first, followed by the main text content, and then the image. Adjust the layout to match this logical flow.",
+    "original": "data/ReadingOrderComplex_TestA",
+    "ground_truth": "data/ReadingOrderComplex_GroundTruthA",
+    "category": [
+      "Structure"
+    ]
+  },
+  {
+    "name": "Case 97: LaTeX to Office Math (OMML)",
+    "prompt": "On slides 2 and 3, convert all text representations of mathematical equations, like 'x^{n} + y^{n} = z^{n}' and '\\\\frac{1}{2}', into properly formatted, editable math objects.",
+    "original": "data/LaTeXtoOMML_TestA",
+    "ground_truth": "data/LaTeXtoOMML_GroundTruthA",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 98: Cross-Slide Conditional Formatting (Status → Timeline)",
+    "prompt": "Using the status table on slide 2, update the project timeline on slide 3. For any project marked 'At Risk', change its corresponding shape's fill color to red, On Track → green, Completed → blue.",
+    "original": "data/CrossSlideStatusToTimeline_TestA",
+    "ground_truth": "data/CrossSlideStatusToTimeline_GroundTruthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 99: Embed & Configure Video Playback",
+    "prompt": "On slide 3, replace the placeholder box with the related image file. The image should be embedded.",
+    "original": "data/EmbedVideoPlayback_TestA",
+    "ground_truth": "data/EmbedVideoPlayback_GroundTruthA",
+    "category": [
+      "Interactivity"
+    ]
+  },
+  {
+    "name": "Case 100: Animation Canonicalization & Bullet Sequencing",
+    "prompt": "On slide 5, apply a 'Fly In' animation from the left to the main bullet points, making each point appear one by one on click. Additionally, adjust the width and height of the main text boxes on slides 3, 4, and 5 to accommodate the content and animation.",
+    "original": "data/AnimationCanonicalization_Bullets_TestA",
+    "ground_truth": "data/AnimationCanonicalization_Bullets_GroundTruthA",
+    "category": [
+      "Interactivity",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 101: MakeLayeredImageFromImage",
+    "prompt": "Please convert the single flat image on the screen into individual layered images. The goal is to reproduce it exactly as it is. Also, generate the SVG code to arrange the images and text accordingly. Do not use rectangles for the shapes. Additionally, draw connecting lines from the bottom of the previous column to the top of the next column. Please refer closely to the provided image when creating this.",
+    "original": "data/MakeLayeredImageFromImage_TestA",
+    "ground_truth": "data/MakeLayeredImageFromImage_GroundTruthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 102: MakeSlideFromTemplate",
+    "prompt": "Please generate a ECCV 2026 presentation based on given template slide. It should be 9 page, and each slide shold cover given contents:\nTitle Slide - \"Multimodal Agent Benchmark for Next-Generation Presentation Editing\" (53 page)\n\nResearch Background & Motivation - Evolution of AI design paradigm, vector-based editing era, Figma environment (18 page)\n\nLimitations of Prior Work - PPTArena and BannerAgency weaknesses (77 page)\n\nOur Proposal: Key Contributions - LLM-friendly environment, comprehensive dataset, ACE toolset, optimized workflow (117 page)\n\nACE Tool (40+ Tools) - Slide Management, Charts & Tables, Rich Content, Text Styling categories (110 page)\n\nCARE Routing Engine - Three routing modes (Micro-Spatial, Macro-Programmatic, Systemic-Token) (106 page)\n\nDataset Construction - 100 baseline cases + Figma extensions + synthetic perturbation methodology Experimental Results - Hybrid evaluation framework, performance comparison, Pos@K distribution (112 page)\n\nConclusion & Impact - Key contributions, academic/industry value, future research directions. (120 page)\n\nThank you slide (113 page)\n\nYou should use the slide given for each contents in brack ().",
+    "original": "data/MakeSlideFromTemplate_TestA",
+    "ground_truth": "data/MakeSlideFromTemplate_GroundTruthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 103: Image2Template",
+    "prompt": "Please find suitable template for given image",
+    "original": "data/Find_Similar_Style_Template_TestA",
+    "ground_truth": "data/Find_Similar_Style_Template_GroundTruthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 104: MakeSlidefromText",
+    "prompt": "Can you create an infographic comparing 3 types of protein foods in a pretty green color?",
+    "original": null,
+    "ground_truth": "data/MakeSlidefromText_GroundTruthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 105: ChangeAutoLayout5to6",
+    "prompt": "Please increase autolayout children from 5 to 6 in slide 4, and fill in the contents. Make sure to align and arrange using auto layout",
+    "original": "data/ChangeAutoLayout5to6TestA",
+    "ground_truth": "data/ChangeAutoLayout5to6GroundTruthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 106: ChangeLayoutToAutoLayout",
+    "prompt": "On slide 2, please align 4 lists in the left. Using Autolayout would be preferred.",
+    "original": "data/ChangeLayoutToAutoLayout_TestA",
+    "ground_truth": "data/ChangeLayoutToAutoLayout_GroundTruthA",
+    "category": [
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 107: Match Slide Colors to Theme",
+    "prompt": "Apply a professional color scheme to slide 3 using a other pages palette. Change out of scope into in scope and also the color.",
+    "original": "data/FixSlideColorScheme_TestA",
+    "ground_truth": "data/FixSlideColorScheme_GroundTruth",
+    "category": [
+      "Styling"
+    ]
+  },
+  {
     "name": "Case 108: ConvertTableToBarChart",
     "prompt": "On slide 2, convert the table data showing uninsured rates into a bar chart. Also, create a custom legend for the chart on the right.",
     "original": "data/ConvertTableToBarChart_TestA",
     "ground_truth": "data/ConvertTableToBarChart_GroundTruthA",
-    "category": ["Content", "Layout"]
+    "category": [
+      "Content",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 109: ConvertLatexToSVG",
+    "prompt": "Render all raw LaTeX code in the presentation into proper mathematical notation visuals. Each LaTeX formula (e.g. \\\\sqrt, \\\\frac, \\\\log_a, \\\\cdot) should be converted from plain-text LaTeX source into its corresponding rendered mathematical symbol or expression using a standard math serif font. Separate each rendered formula from its descriptive label into distinct elements.",
+    "original": "data/Latex_TestA",
+    "ground_truth": "data/Latex_GroundTruthA",
+    "category": [
+      "Content"
+    ]
+  },
+  {
+    "name": "Case 110: ConvertLongTextToSmartArt",
+    "prompt": "On slide 1, convert the content into visually pleasing smartart. If the new smartart overlap with existing background element, move the element appropriately.",
+    "original": "data/ConvertLongTextToSmartArt_TestA",
+    "ground_truth": "data/ConvertLongTextToSmartArt_GroundTruthA",
+    "category": [
+      "Structure",
+      "Styling",
+      "Layout"
+    ]
+  },
+  {
+    "name": "Case 111: FillTablefromDataWithHighlighting4thRow",
+    "prompt": "In Slide 7, Take the data from the text box and use it to fill in the empty table below it. Then, delete the original text box. Highlight the 4th row using different color \"BBBBBB\"",
+    "original": "data/FillTablefromDataWithHighlighting4thRow_TestA",
+    "ground_truth": "data/FillTablefromDataWithHighlighting4thRow_GroundTruthA",
+    "category": [
+      "Content",
+      "Styling"
+    ]
+  },
+  {
+    "name": "Case 112: ChangeAutoLayout5to7",
+    "prompt": "Please increase autolayout children from 5 to 7 in slide 4, and fill in the contents. Make sure to keep original layout's margins, align with sibling elements, and arrange using auto layout",
+    "original": "data/ChangeAutoLayout5to7TestA",
+    "ground_truth": "data/ChangeAutoLayout5to7GroundTruthA",
+    "category": [
+      "Content",
+      "Layout"
+    ]
   }
 ]
