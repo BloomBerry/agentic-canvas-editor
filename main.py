@@ -27,7 +27,7 @@ Example usage
   python main.py --model claude-sonnet-4-6 --max-iter 3 --threshold 4.0
 
   # Live run with GPT-5.5:
-  python main.py --model gpt-5.5 --routing dual_llm
+  python main.py --model gpt-6.1-sol --routing dual_llm
 
   # Live, single forward pass (no self-correction loop):
   python main.py --model claude-sonnet-4-6 --single-pass
@@ -256,7 +256,7 @@ def main():
         "--model", type=str, default="claude-sonnet-4-6",
         choices=[
             "claude-sonnet-4-6", "claude-opus-4-6", "claude-3-5-sonnet",
-            "gpt-4o", "gpt-4.1", "gpt-5.2", "gpt-5.5",
+            "gpt-4o", "gpt-4.1", "gpt-5.2", "gpt-5.5", "gpt-6.1-sol",
             "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.1-pro",
             "gemini-3-flash-preview", "gemini-3.5-flash",
         ],

@@ -21,6 +21,27 @@ from typing import List, Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
 
+# CARE 라우팅에 쓰는 모델. 한 곳에서만 바꾸면 되도록 상수로 둔다
+# (예전에는 기본 인자에 "gpt-4.1-mini" 가 세 군데 하드코딩돼 있었다).
+ROUTER_MODEL = "gpt-6-luna"
+
+def _chat_params(model: str, max_out: int) -> dict:
+    """모델 계열에 맞는 생성 파라미터.
+
+    gpt-5.x / gpt-6 / o 계열(reasoning)은 `temperature` 와 `max_tokens` 를 모두 400 으로
+    거부한다 — `max_completion_tokens` 를 써야 하고 온도는 아예 보내면 안 된다.
+    라우터가 이걸 안 지키면 매 호출이 실패해 조용히 heuristic 으로 떨어지므로,
+    모델을 바꿀 때 같이 바뀌도록 한 곳에 모아 둔다.
+    """
+    lowered = model.lower()
+    if lowered.startswith(("gpt-5", "gpt-6", "o1", "o3", "o4")):
+        params: dict = {"max_completion_tokens": max_out}
+        if "-mini" not in lowered and "-nano" not in lowered:
+            params["reasoning_effort"] = "low"
+        return params
+    return {"temperature": 0.0, "max_tokens": max_out}
+
+
 
 # Per-call usage log. Each entry: {label, model, input_tokens, output_tokens,
 # reasoning_tokens, elapsed_sec}. The agentic experiment reads and clears this
@@ -43,6 +64,34 @@ def _record_router_usage(response, model: str, label: str, elapsed_sec: float) -
         })
     except Exception as e:
         logger.warning(f"[CARE-USAGE] tracking failed: {e}")
+
+
+# 라우터 자체도 sLM 교체 후보다. 결과(mode/targets)만 남기면 나중에 학습·평가셋을
+# 만들 수 없으므로 **입력까지** 짝으로 남긴다. 소급이 불가능한 정보다.
+_ROUTER_IO_LOG: list = []
+
+
+def _record_router_io(label: str, model: str, system_prompt: str, user_prompt: str, output: Any) -> None:
+    try:
+        _ROUTER_IO_LOG.append(
+            {
+                "label": label,
+                "model": model,
+                "system": system_prompt,
+                "user": user_prompt,
+                "output": output,
+            }
+        )
+    except Exception as e:  # 로깅이 본 경로를 깨뜨리면 안 된다
+        logger.warning(f"[CARE-IO] tracking failed: {e}")
+
+
+def take_router_io_log() -> list:
+    """입출력 쌍을 꺼내고 비운다. 호출자가 소유권을 가져간다."""
+    global _ROUTER_IO_LOG
+    out = _ROUTER_IO_LOG
+    _ROUTER_IO_LOG = []
+    return out
 
 
 def take_router_usage_log() -> list:
@@ -525,7 +574,7 @@ def classify_instruction_llm(
     summary: PresentationSummary,
     edit_type: Optional[str] = None,
     api_key: Optional[str] = None,
-    model: str = "gpt-4.1-mini",
+    model: str = ROUTER_MODEL,
 ) -> RoutingDecision:
     """
     Use a lightweight LLM to classify the instruction into a routing mode.
@@ -567,10 +616,12 @@ def classify_instruction_llm(
                 {"role": "system", "content": _LLM_ROUTER_SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.0,
-            max_tokens=150,
+            **_chat_params(model, 150),
         )
         _record_router_usage(response, model, "classify_llm", _t.time() - _t0)
+        _record_router_io(
+            "classify_llm", model, _LLM_ROUTER_SYSTEM_PROMPT, user_prompt, response.choices[0].message.content
+        )
         raw = response.choices[0].message.content.strip()
         logger.info(f"[CARE-LLM] Raw response: {raw}")
 
@@ -627,7 +678,7 @@ def classify_instruction_hybrid(
     edit_type: Optional[str] = None,
     confidence_threshold: float = 0.70,
     api_key: Optional[str] = None,
-    llm_model: str = "gpt-4.1-mini",
+    llm_model: str = ROUTER_MODEL,
 ) -> RoutingDecision:
     """
     Two-stage router:
@@ -768,10 +819,12 @@ def _call_mode_llm(
             {"role": "system", "content": _MODE_LLM_SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
         ],
-        temperature=0.0,
-        max_tokens=150,
+        **_chat_params(model, 150),
     )
     _record_router_usage(response, model, "dual_mode", _t.time() - _t0)
+    _record_router_io(
+        "dual_mode", model, _MODE_LLM_SYSTEM_PROMPT, user_prompt, response.choices[0].message.content
+    )
     raw = response.choices[0].message.content.strip()
     logger.info(f"[CARE-DUAL-MODE] Raw response: {raw}")
     return json.loads(raw)
@@ -808,10 +861,12 @@ def _call_needs_image_llm(
             {"role": "system", "content": _NEEDS_IMAGE_LLM_SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
         ],
-        temperature=0.0,
-        max_tokens=100,
+        **_chat_params(model, 100),
     )
     _record_router_usage(response, model, "dual_needs_image", _t.time() - _t0)
+    _record_router_io(
+        "dual_needs_image", model, _NEEDS_IMAGE_LLM_SYSTEM_PROMPT, user_prompt, response.choices[0].message.content
+    )
     raw = response.choices[0].message.content.strip()
     logger.info(f"[CARE-DUAL-IMAGE] Raw response: {raw}")
     return json.loads(raw)
@@ -822,7 +877,7 @@ def classify_instruction_dual_llm(
     summary: PresentationSummary,
     edit_type: Optional[str] = None,
     api_key: Optional[str] = None,
-    llm_model: str = "gpt-4.1-mini",
+    llm_model: str = ROUTER_MODEL,
 ) -> RoutingDecision:
     """
     Dual-LLM router: two independent, parallel LLM calls.

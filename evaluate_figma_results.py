@@ -3733,7 +3733,7 @@ def run_evaluation(
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate Figma Slide Benchmark results")
-    parser.add_argument("--judge-model", default="gpt-5.5", help="Model to use for judging (default: gpt-5.5)")
+    parser.add_argument("--judge-model", default="gpt-6.1-sol", help="Model to use for judging (default: gpt-6.1-sol)")
     parser.add_argument("--api-key", default=None, help="API key (or set OPENAI_API_KEY / GEMINI_API_KEY env var)")
     parser.add_argument("--filter-case", nargs="*", default=None, help="Only evaluate specific case names")
     parser.add_argument("--filter-suffix", default=None, help="Only evaluate result dirs containing this suffix (e.g., CARE_hybrid)")
