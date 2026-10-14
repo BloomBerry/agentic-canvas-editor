@@ -35,14 +35,18 @@ from .care_context import select_images_for_mode
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))  # allow `import evaluate_figma_results`
 
-DISTILL_MODEL = "gpt-5.1-mini"   # same as dual_llm router
-JUDGE_MODEL = "gpt-5.5"
+from .care_router import ROUTER_MODEL
+
+DISTILL_MODEL = ROUTER_MODEL   # same as dual_llm router
+JUDGE_MODEL = "gpt-6.1-sol"
 
 # Per-1M-token pricing (USD). Rough estimates for non-evaluator models;
 # evaluator uses its own constants (see evaluate_figma_results._USD_PER_1M_*).
 _PRICING = {
-    # OpenAI
-    "gpt-5.1-mini": {"input": 0.40, "output": 1.60},   # rough; update if known
+    # OpenAI — $/1M tokens
+    "gpt-6.1-sol":  {"input": 1.25, "output": 10.00},  # 에이전트 백본
+    "gpt-6-luna":   {"input": 0.40, "output": 1.60},   # CARE 라우터 · distill
+    "gpt-5.1-mini": {"input": 0.40, "output": 1.60},
     "gpt-5.5":      {"input": 1.25, "output": 10.00},  # matches evaluator
     # Anthropic
     "claude-sonnet-4-6": {
@@ -152,6 +156,16 @@ def _evaluator_usage_delta(before: dict, after: dict, elapsed_sec: float, model:
     }
 
 
+def _take_router_io() -> list:
+    """라우터의 (입력, 출력) 쌍을 꺼낸다.
+
+    라우터도 sLM 교체 후보이고, 결과만 남기면 나중에 학습·평가셋을 만들 수 없다.
+    usage 와 같은 drain 방식이라 같은 시점에 꺼내야 케이스 경계가 어긋나지 않는다.
+    """
+    from .care_router import take_router_io_log
+    return take_router_io_log()
+
+
 def _take_router_usage_with_cost(model: str) -> dict:
     """Drain CARE router usage log and aggregate. Calls take_router_usage_log() in care_router."""
     from .care_router import take_router_usage_log
@@ -186,7 +200,7 @@ def _load_dotenv(path: Path):
 def _distill_feedback_llm(if_reason: str, logger, original_task: str = "",
                           cumulative_actions: list[str] | None = None,
                           usage_sink: dict | None = None) -> str:
-    """Use gpt-5.1-mini (same as dual router) to turn judge reasoning into
+    """Use DISTILL_MODEL (same as dual router) to turn judge reasoning into
     2–4 imperative bullet actions for the next iter's prompt.
 
     Passes ORIGINAL TASK + ACTIONS ALREADY DONE so the distiller can interpret
@@ -425,6 +439,12 @@ def _judge_if_inline(case: dict, result_dir: Path, result_name: str,
     return float(score) if score is not None else 0.0, reason
 
 
+def _slugify(text: str, limit: int = 40) -> str:
+    """케이스 이름을 디렉터리에 쓸 수 있는 형태로. 한글은 그대로 두고 구분자만 정리한다."""
+    cleaned = re.sub(r"[^\w가-힣]+", "-", text, flags=re.UNICODE).strip("-")
+    return cleaned[:limit] or "case"
+
+
 class FigmaSlideAgenticExperiment(FigmaSlideExperiment):
     """Self-correcting wrapper: loops with IF-judge feedback, no cleanup
     between iters (Pattern B)."""
@@ -484,7 +504,11 @@ class FigmaSlideAgenticExperiment(FigmaSlideExperiment):
             return
 
         dir_name = Path(original_path).name
-        result_name = f"{dir_name}-{self.config.model.value}"
+        # 케이스 이름까지 넣어야 한다. ACE 원본은 덱당 케이스 1개 전제라 덱 이름만으로
+        # 충분했지만, 파일럿은 **덱 하나에 여러 지시문**을 붙이므로 덱 이름만 쓰면
+        # 결과 디렉터리가 겹치고 --auto 가 뒤 케이스를 "이미 있음"으로 건너뛴다.
+        case_slug = _slugify(case.get("name") or f"case{idx}")
+        result_name = f"{dir_name}-{case_slug}-{self.config.model.value}"
         result_dir = self.results_dir / result_name
         case_log = self.logger.add_case_log(result_dir)
 
@@ -513,6 +537,7 @@ class FigmaSlideAgenticExperiment(FigmaSlideExperiment):
         from .care_router import take_router_usage_log as _drain_router
         _drain_router()
         care_usage = {}  # populated after _resolve_routing
+        care_io: list = []
         if self.routing_mode != "off":
             try:
                 summary = self._load_presentation_summary(original_dir)
@@ -532,6 +557,7 @@ class FigmaSlideAgenticExperiment(FigmaSlideExperiment):
                 self.logger.info(f"[CARE] Reason: {decision.reason}")
                 # Capture router LLM usage (drained → aggregated)
                 care_usage = _take_router_usage_with_cost(DISTILL_MODEL)
+                care_io = _take_router_io()
                 if care_usage:
                     self.logger.info(
                         f"[USAGE/CARE] {care_usage['calls']} call(s) "
@@ -597,17 +623,21 @@ class FigmaSlideAgenticExperiment(FigmaSlideExperiment):
                 await self.save_results(result, result_name)
                 self.logger.info(f"[AGENTIC] iter {it} inference done ({infer_t:.0f}s)")
 
-                # (A) Preserve this iter's snapshot dir before next iter overwrites it
+                # (A) Preserve this iter's snapshot dir before next iter overwrites it.
+                # With max_iter == 1 nothing ever overwrites it, so the copy would be
+                # a byte-identical duplicate of snapshots/ (~22MB per case).
                 snap_src = result_dir / "snapshots"
                 snap_dst = result_dir / "iter_snapshots" / f"iter_{it}"
-                try:
-                    snap_dst.parent.mkdir(parents=True, exist_ok=True)
-                    if snap_dst.exists():
-                        shutil.rmtree(snap_dst)
-                    shutil.copytree(snap_src, snap_dst)
-                    self.logger.info(f"[AGENTIC] iter {it} snapshots preserved → iter_snapshots/iter_{it}/")
-                except Exception as e:
-                    self.logger.warning(f"[AGENTIC] failed to preserve iter {it} snapshots: {e}")
+                preserve = self.max_iter > 1
+                if preserve:
+                    try:
+                        snap_dst.parent.mkdir(parents=True, exist_ok=True)
+                        if snap_dst.exists():
+                            shutil.rmtree(snap_dst)
+                        shutil.copytree(snap_src, snap_dst)
+                        self.logger.info(f"[AGENTIC] iter {it} snapshots preserved → iter_snapshots/iter_{it}/")
+                    except Exception as e:
+                        self.logger.warning(f"[AGENTIC] failed to preserve iter {it} snapshots: {e}")
 
                 # Extract this iter's tool-call actions and accumulate across iters.
                 # responses.json gets overwritten each iter, so read it NOW before
@@ -618,10 +648,12 @@ class FigmaSlideAgenticExperiment(FigmaSlideExperiment):
                     self.logger.info(f"[AGENTIC] iter {it} executed {len(iter_actions)} tool call(s); accumulating")
                     cumulative_actions.extend(f"(iter {it}) {a}" for a in iter_actions)
                 # Also copy responses.json into iter_snapshots for record
-                try:
-                    shutil.copy2(resp_path, snap_dst / "responses.json")
-                except Exception:
-                    pass
+                # (skipped at max_iter == 1 — the root copy is never overwritten)
+                if preserve:
+                    try:
+                        shutil.copy2(resp_path, snap_dst / "responses.json")
+                    except Exception:
+                        pass
 
                 # Agent inference usage (from responses.json saved by save_results)
                 agent_usage = _agent_usage_from_responses(resp_path)
@@ -772,6 +804,7 @@ class FigmaSlideAgenticExperiment(FigmaSlideExperiment):
                     "iters_run": len(history),
                     "final_IF": final_if_score,
                     "care_router_usage": care_usage,  # one-time per case
+                    "care_router_io": care_io,        # 라우터 sLM 교체용 (입력, 출력) 쌍
                     "totals_usd": totals,
                     "history": history,
                 }, open(hist_path, "w"), indent=2)

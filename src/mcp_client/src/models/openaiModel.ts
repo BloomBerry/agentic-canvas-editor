@@ -14,6 +14,20 @@ import {
 } from "../types";
 import { ModelInstance } from "./modelInstance";
 
+/**
+ * Does this model reject `temperature`?
+ *
+ * o-series and gpt-5 and newer are reasoning models: sending `temperature`
+ * returns `400 Unsupported parameter`. Keep this in one place — the check used
+ * to be inlined in two methods and silently missed gpt-6 when it shipped.
+ */
+function isReasoningModel(name: string): boolean {
+  const n = name.toLowerCase();
+  if (n.includes("o1") || n.includes("o3") || n.includes("o4")) return true;
+  const m = n.match(/gpt-(\d+)/);
+  return m !== null && Number(m[1]) >= 5;
+}
+
 export class OpenAIModel extends ModelInstance {
   private client: OpenAI;
 
@@ -33,11 +47,9 @@ export class OpenAIModel extends ModelInstance {
       >
     > = {}
   ): Promise<any> {
-    // Reasoning models (o-series and gpt-5+) ignore temperature.
-    const reasoning =
-      this.modelName.includes("o3") ||
-      this.modelName.includes("o1") ||
-      this.modelName.includes("gpt-5");
+    // Reasoning models (o-series and gpt-5+) reject `temperature` outright (HTTP 400),
+    // so the check must cover every new family — gpt-6 was missing here.
+    const reasoning = isReasoningModel(this.modelName);
     const params: OpenAIResponseType.ResponseCreateParams = {
       model: this.modelName,
       input: input,
@@ -62,11 +74,9 @@ export class OpenAIModel extends ModelInstance {
       Omit<OpenAIResponseType.ResponseCreateParams, "input" | "model" | "tools">
     >
   ): Promise<OpenAIResponseType.Responses.Response> {
-    // Reasoning models (o-series and gpt-5+) ignore temperature.
-    const reasoning =
-      this.modelName.includes("o3") ||
-      this.modelName.includes("o1") ||
-      this.modelName.includes("gpt-5");
+    // Reasoning models (o-series and gpt-5+) reject `temperature` outright (HTTP 400),
+    // so the check must cover every new family — gpt-6 was missing here.
+    const reasoning = isReasoningModel(this.modelName);
     const params: OpenAIResponseType.ResponseCreateParams = {
       model: this.modelName,
       input: input,

@@ -25,6 +25,18 @@ import {
   logger,
 } from "../utils/helpers";
 import { getPromptForMode } from "../utils/prompts";
+import { createHash } from "crypto";
+
+/**
+ * OpenAI caps `prompt_cache_key` at 64 chars (400 otherwise). Case ids can be
+ * longer — ours embed deck + case title — so hash the tail instead of truncating:
+ * caching keys on a shared *prefix* would make unrelated cases collide.
+ */
+function cacheKey(raw: string): string {
+  if (raw.length <= 64) return raw;
+  const digest = createHash("sha1").update(raw).digest("hex").slice(0, 12);
+  return `${raw.slice(0, 51)}-${digest}`;
+}
 
 export class SingleFigmaSlideAgent extends AgentInstance {
   /**
@@ -219,7 +231,7 @@ export class SingleFigmaSlideAgent extends AgentInstance {
           modelResponse = await params.model.generateResponseWithTool(
             apiMessageContext,
             toolsArray,
-            { prompt_cache_key: params.metadata.caseId }
+            { prompt_cache_key: cacheKey(params.metadata.caseId) }
           );
         } catch (err: any) {
           const errMsg = err?.message ?? String(err);

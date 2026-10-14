@@ -55,6 +55,15 @@ models:
     max_turns: 1
     max_calls: 100
     max_tokens: 16384
+  gpt-6.1-sol:
+    provider: openai
+    name: gpt-6.1-sol
+    temperature: 0.0
+    input_cost: 0.00125
+    output_cost: 0.010
+    max_turns: 1
+    max_calls: 100
+    max_tokens: 16384
   claude-3-5-sonnet:
     provider: amazon
     name: "anthropic.claude-3-5-sonnet-20241022-v2:0"

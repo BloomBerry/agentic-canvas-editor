@@ -14,6 +14,7 @@ class ModelType(str, Enum):
     GEMINI25FLASH = "gemini-2.5-flash"
     GPT52 = "gpt-5.2"
     GPT55 = "gpt-5.5"
+    GPT61SOL = "gpt-6.1-sol"
     GEMINI25PRO = "gemini-2.5-pro"
     GEMINI31PRO = "gemini-3.1-pro"
     GEMINI3FLASH = "gemini-3-flash-preview"

@@ -327,11 +327,18 @@ class BaseExperiment:
                 # ------------------------------------------------------------------
                 # 1) Save raw snapshot JSON
                 # ------------------------------------------------------------------
+                # The plugin payload carries `structure` and base64 `image_uris`,
+                # both of which we write out as separate files right below. Keeping
+                # them here too costs ~6MB per snapshot and buys nothing — the only
+                # field anyone reads back from this file is `toolResults`
+                # (slide transitions, see _extract_transitions_from_snap_full).
                 snapshot_json_path = (
                     snapshots_dir / f"{result_name}-snapshot-{turn}.json"
                 )
+                slim = {k: v for k, v in snap.items()
+                        if k not in ("structure", "image_uri", "image_uris")}
                 with open(snapshot_json_path, "w", encoding="utf-8") as f:
-                    json.dump(snap, f, indent=2, ensure_ascii=False)
+                    json.dump(slim, f, indent=2, ensure_ascii=False)
 
                 # ------------------------------------------------------------------
                 # 2) Optionally save structure separately for convenience
@@ -392,10 +399,22 @@ class BaseExperiment:
         result_dir = self.results_dir / result_name
         result_dir.mkdir(parents=True, exist_ok=True)
 
-        # 1) Save full raw response
+        # 1) Save the raw response, minus the fields we write out separately.
+        # Every heavy key here is a verbatim copy of another file on disk:
+        #   json_structure -> {name}-json-structure.json
+        #   image_uri(s)   -> snapshots/{name}-snapshot-N-slide-NNN.png
+        #   snapshots      -> snapshots/{name}-snapshot-N.json
+        # Keeping them made this file ~20MB of the ~66MB each case used. The file
+        # itself must still exist: the auto-runner treats its presence as "case
+        # already done" and skips on it.
         raw_response_file = result_dir / f"{result_name}-raw-response.json"
+        _DERIVED = ("json_structure", "image_uri", "image_uris", "snapshots")
+        trimmed = dict(result) if isinstance(result, dict) else result
+        if isinstance(trimmed, dict) and isinstance(trimmed.get("payload"), dict):
+            trimmed["payload"] = {k: v for k, v in trimmed["payload"].items()
+                                  if k not in _DERIVED}
         with open(raw_response_file, "w", encoding="utf-8") as f:
-            json.dump(result, f, indent=2, ensure_ascii=False)
+            json.dump(trimmed, f, indent=2, ensure_ascii=False)
         self.logger.info(f"[SAVE] Raw response saved to {raw_response_file}")
 
         # Guard – make sure payload exists

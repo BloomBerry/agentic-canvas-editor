@@ -6,6 +6,18 @@ const types_1 = require("../types");
 const agentInstance_1 = require("./agentInstance");
 const helpers_1 = require("../utils/helpers");
 const prompts_1 = require("../utils/prompts");
+const crypto_2 = require("crypto");
+/**
+ * OpenAI caps `prompt_cache_key` at 64 chars (400 otherwise). Case ids can be
+ * longer — ours embed deck + case title — so hash the tail instead of truncating:
+ * caching keys on a shared *prefix* would make unrelated cases collide.
+ */
+function cacheKey(raw) {
+    if (raw.length <= 64)
+        return raw;
+    const digest = (0, crypto_2.createHash)("sha1").update(raw).digest("hex").slice(0, 12);
+    return `${raw.slice(0, 51)}-${digest}`;
+}
 class SingleFigmaSlideAgent extends agentInstance_1.AgentInstance {
     /**
      * Agentic modification for Figma Slides presentations.
@@ -135,7 +147,7 @@ class SingleFigmaSlideAgent extends agentInstance_1.AgentInstance {
                     // gpt-5.5 ours achieves 0% cache hit (claude/gemini are OK because
                     // they use explicit/built-in caching). Anthropic/Gemini adapters
                     // ignore unknown options.
-                    modelResponse = await params.model.generateResponseWithTool(apiMessageContext, toolsArray, { prompt_cache_key: params.metadata.caseId });
+                    modelResponse = await params.model.generateResponseWithTool(apiMessageContext, toolsArray, { prompt_cache_key: cacheKey(params.metadata.caseId) });
                 }
                 catch (err) {
                     const errMsg = err?.message ?? String(err);
